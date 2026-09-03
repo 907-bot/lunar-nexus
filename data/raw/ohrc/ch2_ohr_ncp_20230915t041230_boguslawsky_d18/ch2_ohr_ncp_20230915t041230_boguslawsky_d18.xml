@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Product_Observational xmlns="http://pds.nasa.gov/pds4/pds/v1">
+  <Identification_Area>
+    <logical_identifier>urn:isro:isda:ch2_ohr:data_calibrated:ch2_ohr_ncp_20230915t041230_boguslawsky_d18</logical_identifier>
+    <title>Chandrayaan-2 OHRC Calibrated Observation</title>
+  </Identification_Area>
+  <Observation_Area>
+    <Time_Coordinates>
+      <start_date_time>2023-09-15T04:12:30.120Z</start_date_time>
+      <stop_date_time>2023-09-15T04:13:05.450Z</stop_date_time>
+    </Time_Coordinates>
+    <Discipline_Area>
+      <geom:Geometry xmlns:geom="http://pds.nasa.gov/pds4/geom/v1">
+        <geom:Bounding_Coordinates>
+          <south_bounding_coordinate>-74.5</south_bounding_coordinate>
+          <north_bounding_coordinate>-72.0</north_bounding_coordinate>
+          <west_bounding_coordinate>24.0</west_bounding_coordinate>
+          <east_bounding_coordinate>28.0</east_bounding_coordinate>
+        </geom:Bounding_Coordinates>
+        <geom:Illumination_Geometry>
+          <geom:solar_zenith_angle>62.5</geom:solar_zenith_angle>
+          <geom:solar_azimuth_angle>35.0</geom:solar_azimuth_angle>
+          <geom:incidence_angle>62.5</geom:incidence_angle>
+          <geom:emission_angle>2.1</geom:emission_angle>
+          <geom:phase_angle>63.0</geom:phase_angle>
+        </geom:Illumination_Geometry>
+      </geom:Geometry>
+    </Discipline_Area>
+  </Observation_Area>
+  <File_Area_Observational>
+    <File>
+      <file_name>ch2_ohr_ncp_20230915t041230_boguslawsky_d18.png</file_name>
+    </File>
+  </File_Area_Observational>
+</Product_Observational>
