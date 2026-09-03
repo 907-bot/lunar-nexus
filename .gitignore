@@ -1,0 +1,31 @@
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# OS specific
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Large raw raster files (>50MB TIFF/IMG/RAW downloads)
+*.tif
+*.tiff
+*.IMG
+*.img
+*.raw
+*.cub
+*.jp2
+data/raw/issdc_extracted/
+
+# Output bundles
+dist/
+build/
+*.egg-info/
