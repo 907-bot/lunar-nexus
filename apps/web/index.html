@@ -243,12 +243,19 @@
         <div class="preview-section">
           <div class="preview-header">
             <span class="sub-heading">OPTICAL SURFACE PREVIEW</span>
+            <div class="preview-toolbar">
+              <button class="pv-tool-btn" id="btn-pv-zoom-in" title="Zoom In (+)">+</button>
+              <button class="pv-tool-btn" id="btn-pv-zoom-out" title="Zoom Out (−)">−</button>
+              <button class="pv-tool-btn" id="btn-pv-fit-w" title="Fit Width (expand narrow strip)">Fit Width</button>
+              <button class="pv-tool-btn" id="btn-pv-reset" title="Reset View">Reset</button>
+            </div>
             <span class="badge-pill" id="inspect-res-badge">0.25m / px</span>
           </div>
-          <div class="image-viewport" id="image-viewport">
-            <img id="inspect-preview-img" src="" alt="Lunar surface preview">
+          <div class="image-viewport" id="image-viewport" title="Scroll to Zoom • Drag to Pan">
+            <img id="inspect-preview-img" src="" alt="Lunar surface preview" draggable="false">
             <div class="viewport-crosshair"></div>
             <div class="viewport-overlay-tag">NORMALIZED 8-BIT // RADIOMETRIC CALIBRATED</div>
+            <div class="viewport-zoom-hint" id="viewport-zoom-hint">100% • Drag to Pan</div>
           </div>
         </div>
 

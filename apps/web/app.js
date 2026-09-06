@@ -186,9 +186,10 @@ async function initData() {
   applyTheme(state.theme);
   setup2DCanvas();
   setup3DCanvas();
+  setupPreviewControls();
   
-  // Set initial view mode
-  setViewMode('2D');
+  // Set initial view mode to 3D Lunar Globe
+  setViewMode('3D');
   
   try {
     await Promise.all([
@@ -400,6 +401,13 @@ function populateInspector(obs) {
   };
   elements.inspectPreviewImg.onload = () => {
     elements.inspectPreviewImg.style.display = 'block';
+    const img = elements.inspectPreviewImg;
+    // For high aspect-ratio orbital strips (e.g. LRO NAC 1024x149), automatically fit width so craters are clear
+    if (img.naturalHeight && img.naturalWidth && (img.naturalHeight / img.naturalWidth > 1.8)) {
+      fitWidthPreview();
+    } else {
+      resetPreviewTransform();
+    }
   };
   
   const geom = obs.geometry || {};
@@ -436,12 +444,104 @@ function populateInspector(obs) {
   elements.pPath.textContent = obs.primary_local_rel || obs.preview_local_rel || 'Archived in PDS';
 }
 
+const previewState = {
+  zoom: 1.0,
+  panX: 0,
+  panY: 0,
+  isDragging: false,
+  dragStartX: 0,
+  dragStartY: 0,
+};
+
+function updatePreviewTransform() {
+  const img = elements.inspectPreviewImg;
+  if (!img) return;
+  img.style.transform = `translate(${previewState.panX}px, ${previewState.panY}px) scale(${previewState.zoom})`;
+  const hint = document.getElementById('viewport-zoom-hint');
+  if (hint) {
+    hint.textContent = `${Math.round(previewState.zoom * 100)}% • Drag to Pan`;
+  }
+}
+
+function resetPreviewTransform() {
+  previewState.zoom = 1.0;
+  previewState.panX = 0;
+  previewState.panY = 0;
+  updatePreviewTransform();
+}
+
+function fitWidthPreview() {
+  const vp = document.getElementById('image-viewport');
+  const img = elements.inspectPreviewImg;
+  if (!vp || !img || !img.naturalWidth) return;
+  const vpRect = vp.getBoundingClientRect();
+  const currentRenderedW = img.naturalWidth * (vpRect.height / img.naturalHeight);
+  const targetZoom = Math.max(1.8, Math.min(7.0, vpRect.width / Math.max(currentRenderedW, 20)));
+  previewState.zoom = targetZoom;
+  previewState.panX = 0;
+  previewState.panY = 0;
+  updatePreviewTransform();
+}
+
+function setupPreviewControls() {
+  const vp = document.getElementById('image-viewport');
+  if (!vp) return;
+
+  document.getElementById('btn-pv-zoom-in')?.addEventListener('click', () => {
+    previewState.zoom = Math.min(8.0, previewState.zoom * 1.3);
+    updatePreviewTransform();
+  });
+
+  document.getElementById('btn-pv-zoom-out')?.addEventListener('click', () => {
+    previewState.zoom = Math.max(0.5, previewState.zoom * 0.75);
+    updatePreviewTransform();
+  });
+
+  document.getElementById('btn-pv-fit-w')?.addEventListener('click', () => {
+    fitWidthPreview();
+  });
+
+  document.getElementById('btn-pv-reset')?.addEventListener('click', () => {
+    resetPreviewTransform();
+  });
+
+  // Wheel zoom
+  vp.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const factor = e.deltaY < 0 ? 1.15 : 0.85;
+    previewState.zoom = Math.max(0.4, Math.min(10.0, previewState.zoom * factor));
+    updatePreviewTransform();
+  }, { passive: false });
+
+  // Mouse Drag to Pan
+  vp.addEventListener('mousedown', (e) => {
+    previewState.isDragging = true;
+    previewState.dragStartX = e.clientX - previewState.panX;
+    previewState.dragStartY = e.clientY - previewState.panY;
+  });
+
+  window.addEventListener('mousemove', (e) => {
+    if (!previewState.isDragging) return;
+    previewState.panX = e.clientX - previewState.dragStartX;
+    previewState.panY = e.clientY - previewState.dragStartY;
+    updatePreviewTransform();
+  });
+
+  window.addEventListener('mouseup', () => {
+    previewState.isDragging = false;
+  });
+}
+
 /* ==========================================================================
    4. View Mode Switching (2D Map vs 3D Lunar Globe)
    ========================================================================== */
 
 function setViewMode(mode) {
   state.viewMode = mode;
+  const rect = elements.canvasContainer.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const w = rect.width || 800;
+  const h = rect.height || 600;
   
   if (mode === '2D') {
     elements.btnMode2D.classList.add('active');
@@ -449,6 +549,10 @@ function setViewMode(mode) {
     elements.canvas2D.style.display = 'block';
     elements.canvas3D.style.display = 'none';
     elements.btnToggleOrbit.style.display = 'none';
+    elements.canvas2D.width = w * dpr;
+    elements.canvas2D.height = h * dpr;
+    const ctx = elements.canvas2D.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     render2DLunarMap();
   } else {
     elements.btnMode3D.classList.add('active');
@@ -457,6 +561,10 @@ function setViewMode(mode) {
     elements.canvas3D.style.display = 'block';
     elements.btnToggleOrbit.style.display = 'inline-flex';
     updateOrbitButtonText();
+    elements.canvas3D.width = w * dpr;
+    elements.canvas3D.height = h * dpr;
+    const ctx = elements.canvas3D.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     render3DLunarGlobe();
   }
 }
@@ -566,6 +674,87 @@ function screenToLonLat(x, y, width, height) {
   return { lon, lat };
 }
 
+const footprintImageCache = {};
+
+function getFootprintImage(obs) {
+  if (!obs || !obs.product_id) return null;
+  if (footprintImageCache[obs.product_id]) {
+    return footprintImageCache[obs.product_id];
+  }
+  const img = new Image();
+  img.src = `/api/v1/observations/${encodeURIComponent(obs.product_id)}/preview`;
+  img.onload = () => {
+    if (state.viewMode === '2D') render2DLunarMap();
+  };
+  footprintImageCache[obs.product_id] = img;
+  return img;
+}
+
+function draw2DLunarBasemap(ctx, width, height, isDark) {
+  ctx.save();
+  
+  // 1. Lunar Surface Regolith Base (Textured Gray Tone)
+  ctx.fillStyle = isDark ? '#080c14' : '#dbeafe';
+  ctx.fillRect(0, 0, width, height);
+
+  // 2. Volcanic Basaltic Maria (Dark plains)
+  LUNAR_MARIA.forEach(mare => {
+    const pCenter = lonLatToScreen(mare.lon, mare.lat, width, height);
+    const pEdgeX = lonLatToScreen(mare.lon + mare.rLon, mare.lat, width, height);
+    const pEdgeY = lonLatToScreen(mare.lon, mare.lat + mare.rLat, width, height);
+    const rx = Math.abs(pEdgeX.x - pCenter.x);
+    const ry = Math.abs(pEdgeY.y - pCenter.y);
+
+    if (pCenter.x + rx < 0 || pCenter.x - rx > width || pCenter.y + ry < 0 || pCenter.y - ry > height) return;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(pCenter.x, pCenter.y, Math.max(8, rx), Math.max(8, ry), 0, 0, Math.PI * 2);
+    ctx.fillStyle = isDark ? 'rgba(18, 25, 38, 0.75)' : 'rgba(148, 163, 184, 0.4)';
+    ctx.fill();
+
+    if (state.map.zoom >= 1.2) {
+      ctx.strokeStyle = isDark ? 'rgba(56, 189, 248, 0.12)' : 'rgba(2, 132, 199, 0.15)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.fillStyle = isDark ? 'rgba(148, 163, 184, 0.5)' : 'rgba(100, 116, 139, 0.7)';
+      ctx.font = 'italic 10px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(mare.name, pCenter.x, pCenter.y);
+    }
+    ctx.restore();
+  });
+
+  // 3. Shaded Crater Landforms with Depth Shading
+  LUNAR_LANDMARKS.forEach(crater => {
+    const pos = lonLatToScreen(crater.lon, crater.lat, width, height);
+    const radPx = Math.max(6, (crater.radius / 10.0) * (state.map.zoom / 3.0));
+    if (pos.x + radPx < 0 || pos.x - radPx > width || pos.y + radPx < 0 || pos.y - radPx > height) return;
+
+    ctx.save();
+    const craterGrad = ctx.createRadialGradient(
+      pos.x - radPx * 0.25, pos.y - radPx * 0.25, radPx * 0.1,
+      pos.x, pos.y, radPx
+    );
+    if (isDark) {
+      craterGrad.addColorStop(0, 'rgba(4, 6, 10, 0.9)');
+      craterGrad.addColorStop(0.7, 'rgba(15, 23, 42, 0.65)');
+      craterGrad.addColorStop(1.0, 'rgba(56, 189, 248, 0.22)');
+    } else {
+      craterGrad.addColorStop(0, 'rgba(100, 116, 139, 0.5)');
+      craterGrad.addColorStop(0.7, 'rgba(148, 163, 184, 0.3)');
+      craterGrad.addColorStop(1.0, 'rgba(2, 132, 199, 0.2)');
+    }
+    ctx.fillStyle = craterGrad;
+    ctx.beginPath();
+    ctx.arc(pos.x, pos.y, radPx, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  ctx.restore();
+}
+
 function render2DLunarMap() {
   const canvas = elements.canvas2D;
   const ctx = canvas.getContext('2d');
@@ -576,9 +765,7 @@ function render2DLunarMap() {
   if (width === 0 || height === 0) return;
   const isDark = state.theme === 'dark';
   
-  ctx.fillStyle = isDark ? '#06080d' : '#e2e8f0';
-  ctx.fillRect(0, 0, width, height);
-  
+  draw2DLunarBasemap(ctx, width, height, isDark);
   draw2DMapGrid(ctx, width, height, isDark);
   draw2DLandmarks(ctx, width, height, isDark);
   draw2DFootprints(ctx, width, height, isDark);
@@ -702,6 +889,19 @@ function renderSingle2DFootprint(ctx, obs, width, height, isSelected) {
   }
   
   ctx.fillRect(tl.x, tl.y, w, h);
+
+  // Render optical surface imagery inside footprint bounds
+  const img = getFootprintImage(obs);
+  if (img && img.complete && img.naturalWidth > 0) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(tl.x, tl.y, w, h);
+    ctx.clip();
+    ctx.globalAlpha = isSelected ? 0.95 : 0.72;
+    ctx.drawImage(img, tl.x, tl.y, w, h);
+    ctx.restore();
+  }
+
   ctx.strokeRect(tl.x, tl.y, w, h);
   
   const markerLen = Math.min(10, Math.min(w, h) / 3);
@@ -1042,6 +1242,58 @@ function drawLunarSphereBody(ctx, cx, cy, R, isDark) {
   ctx.beginPath();
   ctx.arc(cx, cy, R, 0, Math.PI * 2);
   ctx.fill();
+
+  // Draw crater terrain relief and ejecta ray system on sphere body
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, R - 1, 0, Math.PI * 2);
+  ctx.clip();
+  
+  const craterList = [
+    { lon: -11.2, lat: -43.3, r: 85, rays: true },  // Tycho
+    { lon: -20.1, lat: 9.6, r: 93, rays: true },   // Copernicus
+    { lon: -14.4, lat: -58.4, r: 120 },            // Clavius
+    { lon: 26.2, lat: -72.9, r: 95 },              // Boguslawsky
+    { lon: 0.0, lat: -89.9, r: 40 },               // Shackleton
+    { lon: 26.8, lat: -67.7, r: 98 },              // Manzinus
+    { lon: -38.0, lat: 8.0, r: 40 },               // Kepler
+    { lon: -47.0, lat: 23.0, r: 40 },              // Aristarchus
+    { lon: 26.0, lat: -11.0, r: 100 },             // Theophilus
+    { lon: -2.0, lat: -9.0, r: 150 },              // Ptolemaeus
+    { lon: 61.0, lat: -9.0, r: 130 },              // Langrenus
+  ];
+
+  craterList.forEach(c => {
+    const p = project3D(c.lon, c.lat, R);
+    if (!p.isVisible) return;
+    const px = cx + p.x;
+    const py = cy - p.y;
+    const zScale = p.z / R;
+    const craterR = Math.max(3, (c.r / 15.0) * (R / 200.0) * zScale);
+
+    if (c.rays) {
+      ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.18)' : 'rgba(255, 255, 255, 0.4)';
+      ctx.lineWidth = 1;
+      for (let angle = 0; angle < Math.PI * 2; angle += Math.PI / 4) {
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + Math.cos(angle) * craterR * 4.5, py + Math.sin(angle) * craterR * 4.5);
+        ctx.stroke();
+      }
+    }
+
+    ctx.beginPath();
+    ctx.ellipse(px, py, craterR, craterR * Math.max(0.3, zScale), 0, 0, Math.PI * 2);
+    ctx.fillStyle = isDark ? 'rgba(10, 14, 22, 0.55)' : 'rgba(51, 65, 85, 0.35)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.ellipse(px + lightOffsetX * 0.02, py + lightOffsetY * 0.02, craterR, craterR * Math.max(0.3, zScale), 0, 0, Math.PI * 2);
+    ctx.strokeStyle = isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+  });
+  ctx.restore();
   
   // Perimeter Rim stroke
   ctx.lineWidth = 1.5;

@@ -83,12 +83,14 @@ def extract_features(
         return keypoints, descriptors
 
     elif method == FeatureMethod.AKAZE:
-        if hasattr(cv2, "AKAZE_create"):
-            akaze = cv2.AKAZE_create(threshold=0.001)
+        if hasattr(cv2, "AKAZE_create") or (hasattr(cv2, "AKAZE") and hasattr(cv2.AKAZE, "create")):
+            create_fn = cv2.AKAZE_create if hasattr(cv2, "AKAZE_create") else cv2.AKAZE.create
+            # Try initial threshold suited for subtle lunar surface texture
+            akaze = create_fn(threshold=0.0002)
             keypoints, descriptors = akaze.detectAndCompute(gray, None)
-        elif hasattr(cv2, "AKAZE") and hasattr(cv2.AKAZE, "create"):
-            akaze = cv2.AKAZE.create()
-            keypoints, descriptors = akaze.detectAndCompute(gray, None)
+            if not keypoints or len(keypoints) < 50:
+                akaze = create_fn(threshold=0.00005)
+                keypoints, descriptors = akaze.detectAndCompute(gray, None)
         else:
             # Fallback for OpenCV builds without AKAZE: GFTT + SIFT descriptor
             gftt = cv2.GFTTDetector_create(maxCorners=max_keypoints, qualityLevel=0.01, minDistance=3)

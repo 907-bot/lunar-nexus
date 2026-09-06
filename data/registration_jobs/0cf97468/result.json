@@ -1,0 +1,49 @@
+{
+  "job_id": "0cf97468",
+  "status": "COMPLETED",
+  "source_id": "ch2_ohr_ncp_20230915t041230_boguslawsky_d18",
+  "reference_id": "M1345982701LR_BOGUSLAWSKY_REF",
+  "method": "SIFT",
+  "transform_type": "Homography",
+  "metrics": {
+    "match_count": 442,
+    "inlier_count": 442,
+    "inlier_ratio_pct": 100.0,
+    "reprojection_rmse_px": 0.0469,
+    "runtime_ms": 231.46,
+    "confidence_level": "HIGH",
+    "estimated_rotation_deg": -0.001,
+    "estimated_scale": {
+      "sx": 1.0,
+      "sy": 0.9999
+    },
+    "estimated_translation_px": {
+      "dx": 0.01,
+      "dy": 0.02
+    },
+    "is_registration_successful": true
+  },
+  "transformation_matrix": [
+    [
+      0.9999609009553677,
+      -1.3872608802294563e-05,
+      0.011707212524786728
+    ],
+    [
+      -1.904401393312094e-05,
+      0.9999460501330866,
+      0.020522816347804326
+    ],
+    [
+      -1.6771027919471142e-08,
+      -3.375633822323342e-08,
+      1.0
+    ]
+  ],
+  "artifacts": {
+    "warped_url": "/api/v1/registration/0cf97468/warped",
+    "matches_url": "/api/v1/registration/0cf97468/matches",
+    "checkerboard_url": "/api/v1/registration/0cf97468/checkerboard"
+  },
+  "timestamp": "2026-09-06T16:30:37.806173+00:00"
+}

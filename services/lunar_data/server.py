@@ -32,32 +32,33 @@ class LunarDataService:
         self.load_catalog()
 
     def _resolve_local_image_path(self, raw_path: str | None) -> Path | None:
-        """Resolves absolute or relative image paths to the current machine's workspace."""
+        """Resolves absolute or relative image paths across Windows/POSIX to the current machine's workspace."""
         if not raw_path:
             return None
-        
-        # Check direct path
-        p = Path(raw_path)
+
+        # Normalize backslashes to forward slashes
+        norm = raw_path.replace("\\", "/")
+        p = Path(norm)
         if p.exists() and p.is_file():
             return p
-        
-        # Look for matching path under data/raw
-        parts = p.parts
-        if "data" in parts:
-            try:
-                idx = parts.index("data")
-                relative_sub = Path(*parts[idx:])
-                candidate = WORKSPACE_ROOT / relative_sub
-                if candidate.exists() and candidate.is_file():
-                    return candidate
-            except Exception:
-                pass
 
-        # Look specifically in data/raw for the filename
-        filename = p.name
+        # Check relative to workspace
+        cand_ws = (WORKSPACE_ROOT / norm.lstrip("/")).resolve()
+        if cand_ws.is_file():
+            return cand_ws
+
+        # Check if contains 'data/'
+        if "data/" in norm:
+            sub = norm.split("data/", 1)[1]
+            candidate = (WORKSPACE_ROOT / "data" / sub).resolve()
+            if candidate.is_file():
+                return candidate
+
+        # Look specifically in data/raw for filename
+        filename = norm.split("/")[-1]
         for match in RAW_DATA_DIR.rglob(filename):
             if match.is_file():
-                return match
+                return match.resolve()
 
         return None
 
@@ -80,14 +81,20 @@ class LunarDataService:
                 primary = self._resolve_local_image_path(item.get("primary_image_path"))
                 
                 if preview:
-                    item["preview_local_rel"] = str(preview.relative_to(WORKSPACE_ROOT)).replace("\\", "/")
+                    try:
+                        item["preview_local_rel"] = str(preview.resolve().relative_to(WORKSPACE_ROOT)).replace("\\", "/")
+                    except Exception:
+                        item["preview_local_rel"] = str(preview).replace("\\", "/")
                     item["preview_exists"] = True
                 else:
                     item["preview_local_rel"] = None
                     item["preview_exists"] = False
 
                 if primary:
-                    item["primary_local_rel"] = str(primary.relative_to(WORKSPACE_ROOT)).replace("\\", "/")
+                    try:
+                        item["primary_local_rel"] = str(primary.resolve().relative_to(WORKSPACE_ROOT)).replace("\\", "/")
+                    except Exception:
+                        item["primary_local_rel"] = str(primary).replace("\\", "/")
                     item["primary_exists"] = True
                 else:
                     item["primary_local_rel"] = None
@@ -334,6 +341,29 @@ class LunarDataHTTPHandler(SimpleHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def _send_file(self, file_path: Path):
+        if not file_path.exists() or not file_path.is_file():
+            self._send_json(404, {"error": f"File '{file_path.name}' not found on disk"})
+            return
+        mime, _ = mimetypes.guess_type(str(file_path))
+        mime = mime or "application/octet-stream"
+        try:
+            with open(file_path, "rb") as f:
+                content = f.read()
+            self.send_response(200)
+            self.send_header("Content-Type", mime)
+            self.send_header("Content-Length", str(len(content)))
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(content)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except Exception as e:
+            try:
+                self._send_json(500, {"error": f"Failed to read file: {e}"})
+            except Exception:
+                pass
+
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -444,18 +474,21 @@ class LunarDataHTTPHandler(SimpleHTTPRequestHandler):
                 if rel:
                     full_p = WORKSPACE_ROOT / rel
                     if full_p.exists():
-                        self.path = f"/{rel}"
-                        return super().do_GET()
+                        return self._send_file(full_p)
                 
                 # Fallback to primary image if preview missing
                 prim = obs.get("primary_local_rel")
                 if prim:
                     full_p = WORKSPACE_ROOT / prim
                     if full_p.exists():
-                        self.path = f"/{prim}"
-                        return super().do_GET()
+                        return self._send_file(full_p)
 
-                self._send_json(404, {"error": "Preview image file not found on disk"})
+                # Fallback: search data/raw for product_id
+                for cand in RAW_DATA_DIR.rglob(f"{product_id}*.png"):
+                    if cand.is_file():
+                        return self._send_file(cand)
+
+                self._send_json(404, {"error": f"Preview image file for {product_id} not found on disk"})
                 return
             else:
                 product_id = rest
@@ -488,8 +521,7 @@ class LunarDataHTTPHandler(SimpleHTTPRequestHandler):
                 job_dir = JOBS_DIR / job_id
                 target_img = job_dir / f"{artifact}.png"
                 if target_img.exists():
-                    self.path = str(target_img.relative_to(WORKSPACE_ROOT)).replace("\\", "/")
-                    return super().do_GET()
+                    return self._send_file(target_img)
                 else:
                     self._send_json(404, {"error": f"Artifact '{artifact}' for job {job_id} not found"})
                     return
@@ -510,29 +542,18 @@ class LunarDataHTTPHandler(SimpleHTTPRequestHandler):
         if path == "/" or path == "/index.html":
             index_file = WEB_DIR / "index.html"
             if index_file.exists():
-                with open(index_file, "rb") as f:
-                    content = f.read()
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                self.send_header("Content-Length", str(len(content)))
-                self.end_headers()
-                self.wfile.write(content)
-                return
+                return self._send_file(index_file)
 
-        if path in ["/styles.css", "/app.js"]:
+        if path in ["/styles.css", "/app.js", "/three.min.js"]:
             static_file = WEB_DIR / path.lstrip("/")
             if static_file.exists():
-                mime, _ = mimetypes.guess_type(str(static_file))
-                with open(static_file, "rb") as f:
-                    content = f.read()
-                self.send_response(200)
-                self.send_header("Content-Type", f"{mime}; charset=utf-8")
-                self.send_header("Content-Length", str(len(content)))
-                self.end_headers()
-                self.wfile.write(content)
-                return
+                return self._send_file(static_file)
 
-        # Fallback to standard directory server for images in data/raw/...
+        # Fallback to serving workspace files (e.g. /data/raw/...)
+        target_file = WORKSPACE_ROOT / path.lstrip("/")
+        if target_file.exists() and target_file.is_file():
+            return self._send_file(target_file)
+
         return super().do_GET()
 
     def do_OPTIONS(self):
