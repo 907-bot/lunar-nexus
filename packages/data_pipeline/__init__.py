@@ -34,6 +34,7 @@ from .footprint_engine import (
     FootprintResult,
     LUNAR_GEOGRAPHIC_PROJ4,
     LUNAR_SOUTH_POLE_STEREO_PROJ4,
+    LUNAR_RADIUS_M,
 )
 from .overlap_engine import (
     OverlapEngine,

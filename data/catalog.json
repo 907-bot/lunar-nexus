@@ -23,9 +23,9 @@
       "sub_solar_lon": null,
       "spacecraft_altitude_km": null
     },
-    "primary_image_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\ohrc\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18.png",
-    "label_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\ohrc\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18.xml",
-    "preview_image_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\ohrc\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18.png",
+    "primary_image_path": "data/raw/ohrc/ch2_ohr_ncp_20230915t041230_boguslawsky_d18/ch2_ohr_ncp_20230915t041230_boguslawsky_d18.png",
+    "label_path": "data/raw/ohrc/ch2_ohr_ncp_20230915t041230_boguslawsky_d18/ch2_ohr_ncp_20230915t041230_boguslawsky_d18.xml",
+    "preview_image_path": "data/raw/ohrc/ch2_ohr_ncp_20230915t041230_boguslawsky_d18/ch2_ohr_ncp_20230915t041230_boguslawsky_d18.png",
     "auxiliary_files": [],
     "source_url": null,
     "download_urls": {},
@@ -56,9 +56,9 @@
       "sub_solar_lon": null,
       "spacecraft_altitude_km": null
     },
-    "primary_image_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\lro_nac\\M1345982701LR_BOGUSLAWSKY_REF\\M1345982701LR_BOGUSLAWSKY_REF.png",
+    "primary_image_path": "data/raw/lro_nac/M1345982701LR_BOGUSLAWSKY_REF/M1345982701LR_BOGUSLAWSKY_REF.png",
     "label_path": null,
-    "preview_image_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\lro_nac\\M1345982701LR_BOGUSLAWSKY_REF\\M1345982701LR_BOGUSLAWSKY_REF.png",
+    "preview_image_path": "data/raw/lro_nac/M1345982701LR_BOGUSLAWSKY_REF/M1345982701LR_BOGUSLAWSKY_REF.png",
     "auxiliary_files": [],
     "source_url": null,
     "download_urls": {
@@ -91,9 +91,9 @@
       "sub_solar_lon": null,
       "spacecraft_altitude_km": null
     },
-    "primary_image_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\tmc2\\ch2_tmc_ncn_20230915t041000_boguslawsky_triplet\\ch2_tmc_ncn_20230915t041000_boguslawsky_triplet.png",
+    "primary_image_path": "data/raw/tmc2/ch2_tmc_ncn_20230915t041000_boguslawsky_triplet/ch2_tmc_ncn_20230915t041000_boguslawsky_triplet.png",
     "label_path": null,
-    "preview_image_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\tmc2\\ch2_tmc_ncn_20230915t041000_boguslawsky_triplet\\ch2_tmc_ncn_20230915t041000_boguslawsky_triplet.png",
+    "preview_image_path": "data/raw/tmc2/ch2_tmc_ncn_20230915t041000_boguslawsky_triplet/ch2_tmc_ncn_20230915t041000_boguslawsky_triplet.png",
     "auxiliary_files": [],
     "source_url": null,
     "download_urls": {},
@@ -147,7 +147,7 @@
     },
     "primary_image_path": null,
     "label_path": null,
-    "preview_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/lro_nac/nac.m1417928961le/nac.m1417928961le_preview.png",
+    "preview_image_path": "data/raw/lro_nac/nac.m1417928961le/nac.m1417928961le_preview.png",
     "auxiliary_files": [],
     "source_url": "https://ode.rsl.wustl.edu/moon/indexproductpage.aspx?product_id=nac.m1417928961le&product_idGeo=28830483",
     "download_urls": {
@@ -341,7 +341,7 @@
     },
     "primary_image_path": null,
     "label_path": null,
-    "preview_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/lro_nac/nac.m1417928961re/nac.m1417928961re_preview.png",
+    "preview_image_path": "data/raw/lro_nac/nac.m1417928961re/nac.m1417928961re_preview.png",
     "auxiliary_files": [],
     "source_url": "https://ode.rsl.wustl.edu/moon/indexproductpage.aspx?product_id=nac.m1417928961re&product_idGeo=28830487",
     "download_urls": {
@@ -535,7 +535,7 @@
     },
     "primary_image_path": null,
     "label_path": null,
-    "preview_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/lro_nac/nac.m1417929126le/nac.m1417929126le_preview.png",
+    "preview_image_path": "data/raw/lro_nac/nac.m1417929126le/nac.m1417929126le_preview.png",
     "auxiliary_files": [],
     "source_url": "https://ode.rsl.wustl.edu/moon/indexproductpage.aspx?product_id=nac.m1417929126le&product_idGeo=28830488",
     "download_urls": {
@@ -729,7 +729,7 @@
     },
     "primary_image_path": null,
     "label_path": null,
-    "preview_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/lro_nac/nac.m1417929126re/nac.m1417929126re_preview.png",
+    "preview_image_path": "data/raw/lro_nac/nac.m1417929126re/nac.m1417929126re_preview.png",
     "auxiliary_files": [],
     "source_url": "https://ode.rsl.wustl.edu/moon/indexproductpage.aspx?product_id=nac.m1417929126re&product_idGeo=28830489",
     "download_urls": {
@@ -923,7 +923,7 @@
     },
     "primary_image_path": null,
     "label_path": null,
-    "preview_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/lro_nac/nac.m1417929185le/nac.m1417929185le_preview.png",
+    "preview_image_path": "data/raw/lro_nac/nac.m1417929185le/nac.m1417929185le_preview.png",
     "auxiliary_files": [],
     "source_url": "https://ode.rsl.wustl.edu/moon/indexproductpage.aspx?product_id=nac.m1417929185le&product_idGeo=28830491",
     "download_urls": {
@@ -1117,7 +1117,7 @@
     },
     "primary_image_path": null,
     "label_path": null,
-    "preview_image_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\lro_nac\\nac.m1419447916le\\nac.m1419447916le_preview.png",
+    "preview_image_path": "data/raw/lro_nac/nac.m1419447916le/nac.m1419447916le_preview.png",
     "auxiliary_files": [],
     "source_url": "https://ode.rsl.wustl.edu/moon/indexproductpage.aspx?product_id=nac.m1419447916le&product_idGeo=28855140",
     "download_urls": {
@@ -1311,7 +1311,7 @@
     },
     "primary_image_path": null,
     "label_path": null,
-    "preview_image_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\lro_nac\\nac.m1419447916re\\nac.m1419447916re_preview.png",
+    "preview_image_path": "data/raw/lro_nac/nac.m1419447916re/nac.m1419447916re_preview.png",
     "auxiliary_files": [],
     "source_url": "https://ode.rsl.wustl.edu/moon/indexproductpage.aspx?product_id=nac.m1419447916re&product_idGeo=28855141",
     "download_urls": {

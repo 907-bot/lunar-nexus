@@ -673,10 +673,26 @@ class OverlapPatchExtractor:
             obs.primary_image_path,
             obs.preview_image_path,
         ]
+        project_root = Path(__file__).resolve().parent.parent.parent
         for p in candidates:
-            if p and os.path.exists(p):
+            if not p:
+                continue
+            resolved_p = p
+            if not os.path.exists(resolved_p):
+                clean_p = str(p).replace("\\", "/")
+                if os.path.exists(clean_p):
+                    resolved_p = clean_p
+                else:
+                    idx = clean_p.find("data/")
+                    if idx != -1:
+                        cand = project_root / clean_p[idx:]
+                        if cand.exists():
+                            resolved_p = str(cand)
+                    elif (project_root / clean_p).exists():
+                        resolved_p = str(project_root / clean_p)
+            if os.path.exists(resolved_p):
                 try:
-                    img = Image.open(p)
+                    img = Image.open(resolved_p)
                     # Convert scientific 16-bit or floating-point rasters using 2%-98% percentile stretching
                     arr = np.array(img)
                     if arr.dtype in [np.uint16, np.int16, np.int32, np.float32, np.float64] or (arr.ndim > 2 and arr.dtype != np.uint8):
