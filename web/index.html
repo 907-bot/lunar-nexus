@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NEXUS-LUNAR | AI Lunar Intelligence & Spatial Studio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Leaflet CSS for Lunar GIS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="nexus-theme">
+  <div class="app-layout">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav">
+      <div class="nav-brand">
+        <div class="brand-logo">
+          <div class="orbit-ring"></div>
+          <div class="lunar-core"></div>
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">NEXUS<span>-LUNAR</span></div>
+          <div class="brand-subtitle">Smart India Hackathon • Lunar Intelligence & Overlap Studio</div>
+        </div>
+      </div>
+
+      <div class="nav-tabs">
+        <button class="nav-tab active" data-tab="tab-map" id="tabBtnMap">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+          Lunar GIS Map
+        </button>
+        <button class="nav-tab" data-tab="tab-patches" id="tabBtnPatches">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          POC 2 Patch Studio
+          <span class="badge-pulse" id="pairCountBadge">0</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-catalog" id="tabBtnCatalog">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
+          Catalog Index
+        </button>
+      </div>
+
+      <div class="nav-actions">
+        <div class="status-indicator">
+          <span class="pulse-dot"></span>
+          <span class="status-text" id="statusText">Catalog Online</span>
+        </div>
+        <button class="btn-refresh" id="btnRefreshCatalog" title="Reload Catalog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Workspace -->
+    <main class="main-content">
+      <!-- TAB 1: Lunar GIS Map View -->
+      <section class="tab-pane active" id="tab-map">
+        <div class="map-workspace">
+          <div id="lunarMap" class="lunar-map-container"></div>
+
+          <!-- Map Overlay Floating Control Panel -->
+          <div class="map-floating-panel glassmorphism">
+            <div class="panel-header">
+              <h3>Lunar Footprint Filters</h3>
+              <span class="tag-pill" id="visibleFootprintsCount">0 visible</span>
+            </div>
+            
+            <div class="filter-group">
+              <label class="filter-label">Target Sensors</label>
+              <div class="sensor-chips">
+                <label class="chip chip-ohrc">
+                  <input type="checkbox" checked value="OHRC" class="sensor-filter">
+                  <span class="chip-color"></span> Chandrayaan-2 OHRC
+                </label>
+                <label class="chip chip-lro">
+                  <input type="checkbox" checked value="LRO_NAC" class="sensor-filter">
+                  <span class="chip-color"></span> NASA LRO NAC
+                </label>
+                <label class="chip chip-tmc">
+                  <input type="checkbox" checked value="TMC2" class="sensor-filter">
+                  <span class="chip-color"></span> Chandrayaan-2 TMC-2
+                </label>
+              </div>
+            </div>
+
+            <div class="quick-jump-group">
+              <label class="filter-label">Quick Jump to Region</label>
+              <div class="jump-buttons">
+                <button class="btn-jump" data-lat="-73.25" data-lon="26.0" data-zoom="7">
+                  Boguslawsky (South Pole)
+                </button>
+                <button class="btn-jump" data-lat="-85.0" data-lon="0.0" data-zoom="6">
+                  Deep Lunar South Pole
+                </button>
+                <button class="btn-jump" data-lat="0.0" data-lon="0.0" data-zoom="3">
+                  Global Equator
+                </button>
+              </div>
+            </div>
+
+            <div class="layer-info-card" id="selectedObservationCard">
+              <div class="card-empty-state">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                <span>Click any footprint polygon to inspect geometry and find overlaps.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 2: POC 2 Patch Studio -->
+      <section class="tab-pane" id="tab-patches">
+        <div class="patches-studio-layout">
+          <!-- Left Sidebar: Overlapping Pairs Browser -->
+          <aside class="studio-sidebar glassmorphism">
+            <div class="sidebar-header">
+              <h3>Overlapping Observation Pairs</h3>
+              <p class="subtitle">Discovered candidate co-registration footprints</p>
+            </div>
+
+            <div class="pairs-list" id="pairsContainer">
+              <!-- Dynamically populated -->
+              <div class="loading-spinner-box">
+                <div class="spinner"></div>
+                <span>Scanning catalog for overlapping pairs...</span>
+              </div>
+            </div>
+          </aside>
+
+          <!-- Right Center: Patch Studio & Split Comparison Canvas -->
+          <section class="studio-workspace">
+            <div class="studio-topbar glassmorphism" id="activePairBanner">
+              <div class="pair-headline">
+                <div class="headline-title" id="bannerPairTitle">Select a pair from the left panel</div>
+                <div class="headline-meta" id="bannerPairMeta">POC 2 Resolution-Aware Patch Engine</div>
+              </div>
+              <div class="pair-actions">
+                <button class="btn-secondary" id="btnViewPairOnMap" disabled style="display: inline-flex; align-items: center; gap: 6px; padding: 9px 14px; font-size: 0.85rem; color: #fff; background: rgba(255,255,255,0.06); border: 1px solid var(--border-subtle); border-radius: 8px; cursor: pointer;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon></svg>
+                  View on GIS Map
+                </button>
+                <button class="btn-primary" id="btnOpenExtractModal" disabled>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="12" y1="18" x2="12" y2="12"></line><line x1="9" y1="15" x2="15" y2="15"></line></svg>
+                  Configure & Extract Patches
+                </button>
+              </div>
+            </div>
+
+            <!-- Split-Screen Interactive Comparison Tool -->
+            <div class="split-viewer-card glassmorphism" id="splitViewerContainer">
+              <div class="viewer-header">
+                <div class="viewer-title">
+                  <span class="indicator-icon"></span>
+                  <strong>Live Co-Registration Visualizer</strong>
+                  <span class="active-patch-label" id="currentPatchLabel">Patch #0001</span>
+                </div>
+                <div class="viewer-controls">
+                  <span class="slider-label">Source vs Reference Swipe:</span>
+                  <input type="range" min="0" max="100" value="50" class="compare-slider" id="compareSlider">
+                  <button class="btn-toggle" id="btnToggleMode">Toggle Blink</button>
+                </div>
+              </div>
+
+              <div class="comparison-stage" id="comparisonStage">
+                <div class="stage-layer layer-ref" id="layerRef">
+                  <img id="imgRefView" src="" alt="Reference Image">
+                  <div class="stage-tag tag-ref" id="lblRefTag">Reference (LRO NAC)</div>
+                </div>
+                <div class="stage-layer layer-src" id="layerSrc">
+                  <img id="imgSrcView" src="" alt="Source Image">
+                  <div class="stage-tag tag-src" id="lblSrcTag">Source (OHRC)</div>
+                </div>
+                <div class="divider-line" id="dividerLine">
+                  <div class="divider-handle"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Extracted Patches Grid -->
+            <div class="extracted-patches-container">
+              <div class="section-title-row">
+                <h4>Extracted Resolution-Harmonized Patches</h4>
+                <div class="stats-pills" id="patchStatsPills"></div>
+              </div>
+              <div class="patches-grid-view" id="patchesGridView">
+                <!-- Dynamically rendered -->
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- TAB 3: Catalog Index Table -->
+      <section class="tab-pane" id="tab-catalog">
+        <div class="catalog-workspace glassmorphism">
+          <div class="catalog-header-row">
+            <div>
+              <h2>Indexed Lunar Observations</h2>
+              <p class="subtitle">Complete metadata catalog indexed in data/catalog.json</p>
+            </div>
+            <div class="search-box">
+              <input type="text" id="catalogSearchInput" placeholder="Search by product ID, sensor, or mission...">
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="catalog-table">
+              <thead>
+                <tr>
+                  <th>Preview</th>
+                  <th>Product ID</th>
+                  <th>Mission</th>
+                  <th>Sensor</th>
+                  <th>Resolution</th>
+                  <th>Latitude Span</th>
+                  <th>Longitude Span</th>
+                  <th>Solar Incidence</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="catalogTableBody">
+                <!-- Dynamically generated rows -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Extraction Modal Dialog -->
+  <div class="modal-backdrop" id="extractModal">
+    <div class="modal-dialog glassmorphism">
+      <div class="modal-header">
+        <h3>POC 2: Patch Extraction Parameters</h3>
+        <button class="btn-close" id="btnCloseExtractModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <label>Source Observation</label>
+          <input type="text" id="modalSourceId" readonly class="input-readonly">
+        </div>
+        <div class="form-row">
+          <label>Reference Observation</label>
+          <input type="text" id="modalRefId" readonly class="input-readonly">
+        </div>
+        <div class="form-grid">
+          <div class="form-row">
+            <label>Patch Size (pixels)</label>
+            <select id="modalPatchSize">
+              <option value="256">256 x 256 px</option>
+              <option value="512" selected>512 x 512 px (Recommended)</option>
+              <option value="1024">1024 x 1024 px</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>Sliding Stride</label>
+            <select id="modalStride">
+              <option value="128">128 px (50% Overlap)</option>
+              <option value="256">256 px (50% Overlap for 512)</option>
+              <option value="512" selected>512 px (No Tile Overlap)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Resolution Harmonization Strategy</label>
+          <select id="modalStrategy">
+            <option value="match_coarser" selected>Match Coarser (Downsample Higher-Res to Target GSD)</option>
+            <option value="match_finer">Match Finer (Upsample Lower-Res to Higher GSD)</option>
+            <option value="native_physical">Native Physical Scale (Preserve Pixels, Scale Bounds)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" id="btnCancelModal">Cancel</button>
+        <button class="btn-primary" id="btnRunExtraction">Run Patch Extraction Engine</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Leaflet JS for GIS map -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="/app.js"></script>
+</body>
+</html>
