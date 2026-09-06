@@ -3,7 +3,7 @@
     "product_id": "ch2_ohr_ncp_20230915t041230_boguslawsky_d18",
     "mission": "CHANDRAYAAN-2",
     "sensor": "OHRC",
-    "acquisition_time": "2023-09-15T04:12:30.120000",
+    "acquisition_time": "2023-09-15T04:12:30",
     "spatial_resolution_m": 0.25,
     "crs": "Moon 2000 (IAU2000:30100)",
     "bbox": {
@@ -23,16 +23,14 @@
       "sub_solar_lon": null,
       "spacecraft_altitude_km": null
     },
-    "primary_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/ohrc/ch2_ohr_ncp_20230915t041230_boguslawsky_d18/ch2_ohr_ncp_20230915t041230_boguslawsky_d18.png",
-    "label_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/ohrc/ch2_ohr_ncp_20230915t041230_boguslawsky_d18/ch2_ohr_ncp_20230915t041230_boguslawsky_d18.xml",
-    "preview_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/ohrc/ch2_ohr_ncp_20230915t041230_boguslawsky_d18/ch2_ohr_ncp_20230915t041230_boguslawsky_d18_preview.png",
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18.png",
+    "label_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18.xml",
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18\\ch2_ohr_ncp_20230915t041230_boguslawsky_d18.png",
     "auxiliary_files": [],
     "source_url": null,
     "download_urls": {},
-    "extra_metadata": {
-      "pds4_source": "ch2_ohr_ncp_20230915t041230_boguslawsky_d18.xml"
-    },
-    "ingested_at": "2026-09-03T18:10:33.280521"
+    "extra_metadata": {},
+    "ingested_at": "2026-09-06T03:11:14.550514"
   },
   "M1345982701LR_BOGUSLAWSKY_REF": {
     "product_id": "M1345982701LR_BOGUSLAWSKY_REF",
@@ -58,16 +56,16 @@
       "sub_solar_lon": null,
       "spacecraft_altitude_km": null
     },
-    "primary_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/lro_nac/M1345982701LR_BOGUSLAWSKY_REF/M1345982701LR_BOGUSLAWSKY_REF.png",
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\lro_nac\\M1345982701LR_BOGUSLAWSKY_REF\\M1345982701LR_BOGUSLAWSKY_REF.png",
     "label_path": null,
-    "preview_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/lro_nac/M1345982701LR_BOGUSLAWSKY_REF/M1345982701LR_BOGUSLAWSKY_REF.png",
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\lro_nac\\M1345982701LR_BOGUSLAWSKY_REF\\M1345982701LR_BOGUSLAWSKY_REF.png",
     "auxiliary_files": [],
     "source_url": null,
     "download_urls": {
       "browse": "https://lroc.sese.asu.edu/data/..."
     },
     "extra_metadata": {},
-    "ingested_at": "2026-09-03T18:10:24.710743"
+    "ingested_at": "2026-09-06T03:11:15.366112"
   },
   "ch2_tmc_ncn_20230915t041000_boguslawsky_triplet": {
     "product_id": "ch2_tmc_ncn_20230915t041000_boguslawsky_triplet",
@@ -93,14 +91,14 @@
       "sub_solar_lon": null,
       "spacecraft_altitude_km": null
     },
-    "primary_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/tmc2/ch2_tmc_ncn_20230915t041000_boguslawsky_triplet/ch2_tmc_ncn_20230915t041000_boguslawsky_triplet.png",
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\tmc2\\ch2_tmc_ncn_20230915t041000_boguslawsky_triplet\\ch2_tmc_ncn_20230915t041000_boguslawsky_triplet.png",
     "label_path": null,
-    "preview_image_path": "/Users/abhishekadari/projects/SIH-Lunar/data/raw/tmc2/ch2_tmc_ncn_20230915t041000_boguslawsky_triplet/ch2_tmc_ncn_20230915t041000_boguslawsky_triplet.png",
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\tmc2\\ch2_tmc_ncn_20230915t041000_boguslawsky_triplet\\ch2_tmc_ncn_20230915t041000_boguslawsky_triplet.png",
     "auxiliary_files": [],
     "source_url": null,
     "download_urls": {},
     "extra_metadata": {},
-    "ingested_at": "2026-09-03T18:10:24.781937"
+    "ingested_at": "2026-09-06T03:11:15.536901"
   },
   "nac.m1417928961le": {
     "product_id": "nac.m1417928961le",
@@ -1071,5 +1069,269 @@
       "Westernmost_longitude": "283.48"
     },
     "ingested_at": "2026-09-03T18:11:00.945311"
+  },
+  "ch2_ohr_ncp_20230916t062010_boguslawsky_pass2": {
+    "product_id": "ch2_ohr_ncp_20230916t062010_boguslawsky_pass2",
+    "mission": "CHANDRAYAAN-2",
+    "sensor": "OHRC",
+    "acquisition_time": "2023-09-16T06:20:10",
+    "spatial_resolution_m": 0.25,
+    "crs": "Moon 2000 (IAU2000:30100)",
+    "bbox": {
+      "min_lat": -74.5,
+      "max_lat": -72.0,
+      "min_lon": 24.0,
+      "max_lon": 28.0
+    },
+    "footprint_polygon": null,
+    "geometry": {
+      "solar_zenith_deg": 60.0,
+      "solar_azimuth_deg": 40.0,
+      "incidence_angle_deg": 60.0,
+      "emission_angle_deg": null,
+      "phase_angle_deg": null,
+      "sub_solar_lat": null,
+      "sub_solar_lon": null,
+      "spacecraft_altitude_km": null
+    },
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20230916t062010_boguslawsky_pass2\\ch2_ohr_ncp_20230916t062010_boguslawsky_pass2.png",
+    "label_path": null,
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20230916t062010_boguslawsky_pass2\\ch2_ohr_ncp_20230916t062010_boguslawsky_pass2.png",
+    "auxiliary_files": [],
+    "source_url": null,
+    "download_urls": {},
+    "extra_metadata": {},
+    "ingested_at": "2026-09-06T03:11:16.457305"
+  },
+  "ch2_ohr_ncp_20230823t123015_shackleton_rim": {
+    "product_id": "ch2_ohr_ncp_20230823t123015_shackleton_rim",
+    "mission": "CHANDRAYAAN-2",
+    "sensor": "OHRC",
+    "acquisition_time": "2023-08-23T12:30:15",
+    "spatial_resolution_m": 0.25,
+    "crs": "Moon 2000 (IAU2000:30100)",
+    "bbox": {
+      "min_lat": -89.9,
+      "max_lat": -88.5,
+      "min_lon": 0.0,
+      "max_lon": 180.0
+    },
+    "footprint_polygon": null,
+    "geometry": {
+      "solar_zenith_deg": 82.0,
+      "solar_azimuth_deg": 110.0,
+      "incidence_angle_deg": 82.0,
+      "emission_angle_deg": null,
+      "phase_angle_deg": null,
+      "sub_solar_lat": null,
+      "sub_solar_lon": null,
+      "spacecraft_altitude_km": null
+    },
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20230823t123015_shackleton_rim\\ch2_ohr_ncp_20230823t123015_shackleton_rim.png",
+    "label_path": null,
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20230823t123015_shackleton_rim\\ch2_ohr_ncp_20230823t123015_shackleton_rim.png",
+    "auxiliary_files": [],
+    "source_url": null,
+    "download_urls": {},
+    "extra_metadata": {},
+    "ingested_at": "2026-09-06T03:11:17.171633"
+  },
+  "ch2_tmc_ncn_20230823t122800_shackleton_triplet": {
+    "product_id": "ch2_tmc_ncn_20230823t122800_shackleton_triplet",
+    "mission": "CHANDRAYAAN-2",
+    "sensor": "TMC2",
+    "acquisition_time": "2023-08-23T12:28:00",
+    "spatial_resolution_m": 5.0,
+    "crs": "Moon 2000 (IAU2000:30100)",
+    "bbox": {
+      "min_lat": -89.9,
+      "max_lat": -88.5,
+      "min_lon": 0.0,
+      "max_lon": 180.0
+    },
+    "footprint_polygon": null,
+    "geometry": {
+      "solar_zenith_deg": 82.0,
+      "solar_azimuth_deg": 110.0,
+      "incidence_angle_deg": 82.0,
+      "emission_angle_deg": null,
+      "phase_angle_deg": null,
+      "sub_solar_lat": null,
+      "sub_solar_lon": null,
+      "spacecraft_altitude_km": null
+    },
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\tmc2\\ch2_tmc_ncn_20230823t122800_shackleton_triplet\\ch2_tmc_ncn_20230823t122800_shackleton_triplet.png",
+    "label_path": null,
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\tmc2\\ch2_tmc_ncn_20230823t122800_shackleton_triplet\\ch2_tmc_ncn_20230823t122800_shackleton_triplet.png",
+    "auxiliary_files": [],
+    "source_url": null,
+    "download_urls": {},
+    "extra_metadata": {},
+    "ingested_at": "2026-09-06T03:11:17.324084"
+  },
+  "M1123456789_SHACKLETON_REF": {
+    "product_id": "M1123456789_SHACKLETON_REF",
+    "mission": "LRO",
+    "sensor": "LRO_NAC",
+    "acquisition_time": "2021-06-14T18:10:00",
+    "spatial_resolution_m": 0.5,
+    "crs": "Moon 2000 (IAU2000:30100)",
+    "bbox": {
+      "min_lat": -89.9,
+      "max_lat": -88.5,
+      "min_lon": 0.0,
+      "max_lon": 180.0
+    },
+    "footprint_polygon": null,
+    "geometry": {
+      "solar_zenith_deg": 78.0,
+      "solar_azimuth_deg": 115.0,
+      "incidence_angle_deg": 78.0,
+      "emission_angle_deg": null,
+      "phase_angle_deg": null,
+      "sub_solar_lat": null,
+      "sub_solar_lon": null,
+      "spacecraft_altitude_km": null
+    },
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\lro_nac\\M1123456789_SHACKLETON_REF\\M1123456789_SHACKLETON_REF.png",
+    "label_path": null,
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\lro_nac\\M1123456789_SHACKLETON_REF\\M1123456789_SHACKLETON_REF.png",
+    "auxiliary_files": [],
+    "source_url": null,
+    "download_urls": {},
+    "extra_metadata": {},
+    "ingested_at": "2026-09-06T03:11:18.119471"
+  },
+  "ch2_ohr_ncp_20230712t081545_apollo17_site": {
+    "product_id": "ch2_ohr_ncp_20230712t081545_apollo17_site",
+    "mission": "CHANDRAYAAN-2",
+    "sensor": "OHRC",
+    "acquisition_time": "2023-07-12T08:15:45",
+    "spatial_resolution_m": 0.32,
+    "crs": "Moon 2000 (IAU2000:30100)",
+    "bbox": {
+      "min_lat": 20.0,
+      "max_lat": 20.5,
+      "min_lon": 30.5,
+      "max_lon": 31.0
+    },
+    "footprint_polygon": null,
+    "geometry": {
+      "solar_zenith_deg": 45.0,
+      "solar_azimuth_deg": 85.0,
+      "incidence_angle_deg": 45.0,
+      "emission_angle_deg": null,
+      "phase_angle_deg": null,
+      "sub_solar_lat": null,
+      "sub_solar_lon": null,
+      "spacecraft_altitude_km": null
+    },
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20230712t081545_apollo17_site\\ch2_ohr_ncp_20230712t081545_apollo17_site.png",
+    "label_path": null,
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20230712t081545_apollo17_site\\ch2_ohr_ncp_20230712t081545_apollo17_site.png",
+    "auxiliary_files": [],
+    "source_url": null,
+    "download_urls": {},
+    "extra_metadata": {},
+    "ingested_at": "2026-09-06T03:11:19.041264"
+  },
+  "ch2_tmc_ncn_20230712t081200_apollo17_context": {
+    "product_id": "ch2_tmc_ncn_20230712t081200_apollo17_context",
+    "mission": "CHANDRAYAAN-2",
+    "sensor": "TMC2",
+    "acquisition_time": "2023-07-12T08:12:00",
+    "spatial_resolution_m": 5.0,
+    "crs": "Moon 2000 (IAU2000:30100)",
+    "bbox": {
+      "min_lat": 20.0,
+      "max_lat": 20.5,
+      "min_lon": 30.5,
+      "max_lon": 31.0
+    },
+    "footprint_polygon": null,
+    "geometry": {
+      "solar_zenith_deg": 45.0,
+      "solar_azimuth_deg": 85.0,
+      "incidence_angle_deg": 45.0,
+      "emission_angle_deg": null,
+      "phase_angle_deg": null,
+      "sub_solar_lat": null,
+      "sub_solar_lon": null,
+      "spacecraft_altitude_km": null
+    },
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\tmc2\\ch2_tmc_ncn_20230712t081200_apollo17_context\\ch2_tmc_ncn_20230712t081200_apollo17_context.png",
+    "label_path": null,
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\tmc2\\ch2_tmc_ncn_20230712t081200_apollo17_context\\ch2_tmc_ncn_20230712t081200_apollo17_context.png",
+    "auxiliary_files": [],
+    "source_url": null,
+    "download_urls": {},
+    "extra_metadata": {},
+    "ingested_at": "2026-09-06T03:11:19.216991"
+  },
+  "M1198765432_APOLLO17_REF": {
+    "product_id": "M1198765432_APOLLO17_REF",
+    "mission": "LRO",
+    "sensor": "LRO_NAC",
+    "acquisition_time": "2019-12-05T09:30:00",
+    "spatial_resolution_m": 0.5,
+    "crs": "Moon 2000 (IAU2000:30100)",
+    "bbox": {
+      "min_lat": 20.0,
+      "max_lat": 20.5,
+      "min_lon": 30.5,
+      "max_lon": 31.0
+    },
+    "footprint_polygon": null,
+    "geometry": {
+      "solar_zenith_deg": 50.0,
+      "solar_azimuth_deg": 90.0,
+      "incidence_angle_deg": 50.0,
+      "emission_angle_deg": null,
+      "phase_angle_deg": null,
+      "sub_solar_lat": null,
+      "sub_solar_lon": null,
+      "spacecraft_altitude_km": null
+    },
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\lro_nac\\M1198765432_APOLLO17_REF\\M1198765432_APOLLO17_REF.png",
+    "label_path": null,
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\lro_nac\\M1198765432_APOLLO17_REF\\M1198765432_APOLLO17_REF.png",
+    "auxiliary_files": [],
+    "source_url": null,
+    "download_urls": {},
+    "extra_metadata": {},
+    "ingested_at": "2026-09-06T03:11:20.068038"
+  },
+  "ch2_ohr_ncp_20231005t141020_manzinus_crater": {
+    "product_id": "ch2_ohr_ncp_20231005t141020_manzinus_crater",
+    "mission": "CHANDRAYAAN-2",
+    "sensor": "OHRC",
+    "acquisition_time": "2023-10-05T14:10:20",
+    "spatial_resolution_m": 0.28,
+    "crs": "Moon 2000 (IAU2000:30100)",
+    "bbox": {
+      "min_lat": -68.5,
+      "max_lat": -66.5,
+      "min_lon": 25.5,
+      "max_lon": 28.5
+    },
+    "footprint_polygon": null,
+    "geometry": {
+      "solar_zenith_deg": 55.0,
+      "solar_azimuth_deg": 45.0,
+      "incidence_angle_deg": 55.0,
+      "emission_angle_deg": null,
+      "phase_angle_deg": null,
+      "sub_solar_lat": null,
+      "sub_solar_lon": null,
+      "spacecraft_altitude_km": null
+    },
+    "primary_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20231005t141020_manzinus_crater\\ch2_ohr_ncp_20231005t141020_manzinus_crater.png",
+    "label_path": null,
+    "preview_image_path": "C:\\Users\\hp\\OneDrive\\Desktop\\lunar-nexus\\data\\raw\\ohrc\\ch2_ohr_ncp_20231005t141020_manzinus_crater\\ch2_ohr_ncp_20231005t141020_manzinus_crater.png",
+    "auxiliary_files": [],
+    "source_url": null,
+    "download_urls": {},
+    "extra_metadata": {},
+    "ingested_at": "2026-09-06T03:11:20.941788"
   }
 }

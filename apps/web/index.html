@@ -15,9 +15,29 @@
     <div class="brand-block">
       <div class="status-orb" id="system-status-orb" title="Microservice Status: Active"></div>
       <div class="brand-text">
-        <span class="brand-tag">LAYER 1 MICROSERVICE</span>
-        <h1 class="brand-title">NEXUS-LUNAR // DATA EXPLORER</h1>
+        <span class="brand-tag" id="app-module-tag">LAYER 1 MICROSERVICE</span>
+        <h1 class="brand-title" id="app-module-title">NEXUS-LUNAR // DATA EXPLORER</h1>
       </div>
+    </div>
+
+    <!-- Mode Switcher Tabs -->
+    <div class="mode-nav-group" id="mode-nav-group">
+      <button class="mode-nav-btn active" id="btn-nav-layer1" data-mode="layer1" title="Layer 1: Lunar Data Explorer">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+        <span>L1 EXPLORER</span>
+      </button>
+      <button class="mode-nav-btn" id="btn-nav-poc3" data-mode="poc3" title="POC 3: Classical Registration Engine">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M3 12h3m12 0h3M12 3v3m0 12v3"></path>
+          <circle cx="12" cy="12" r="8" stroke-dasharray="2 2"></circle>
+        </svg>
+        <span>POC 3 REGISTRATION</span>
+      </button>
     </div>
 
     <!-- Live Telemetry Readouts -->
@@ -81,8 +101,8 @@
     </div>
   </header>
 
-  <!-- Main Workspace Layout -->
-  <main class="workspace-layout">
+  <!-- Main Workspace Layout (Layer 1) -->
+  <main class="workspace-layout" id="layer1-workspace">
     <!-- Left Sidebar: Catalog Explorer & Filter Engine -->
     <aside class="sidebar-panel">
       <!-- Search Input -->
@@ -310,6 +330,317 @@
               <path d="M3 21l7-7"></path>
             </svg>
             Find Overlapping Reference Pairs
+          </button>
+          <button class="btn btn-outline" id="btn-inspect-register-poc3" style="margin-top: 0.5rem; width: 100%; justify-content: center;" title="Send observation to POC 3 Classical Registration">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M3 12h3m12 0h3M12 3v3m0 12v3"></path>
+            </svg>
+            <span>Register in POC 3 Engine ➔</span>
+          </button>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- POC 3 Classical Registration Engine Workspace -->
+  <main class="poc3-workspace" id="poc3-workspace" style="display:none;">
+    <!-- Left Configuration & Execution Panel -->
+    <aside class="poc3-sidebar">
+      <div class="poc3-sidebar-header">
+        <div class="poc3-header-tag">POC 3 MICROSERVICE</div>
+        <h2 class="poc3-title">Registration Controls</h2>
+        <p class="poc3-subtitle">Deterministic feature extraction, correspondence matching & RANSAC transformation.</p>
+      </div>
+
+      <!-- Quick Preset: Boguslawsky Benchmark Pair -->
+      <div class="poc3-card">
+        <div class="poc3-card-header">
+          <span class="section-title">BENCHMARK TESTBED</span>
+          <button class="link-btn" id="btn-load-boguslawsky-pair">Load Default</button>
+        </div>
+        <button class="btn btn-preset" id="btn-preset-boguslawsky">
+          <span class="preset-name">Boguslawsky Crater Testbed</span>
+          <span class="preset-details">CH2 OHRC (0.25m) ⟷ LRO NAC (0.75m)</span>
+        </button>
+      </div>
+
+      <!-- Source & Reference Selection -->
+      <div class="poc3-card">
+        <span class="section-title">IMAGE PAIR SELECTION</span>
+        <div class="form-group">
+          <label class="form-label" for="reg-select-source">Source Image (Chandrayaan-2 / All Sources)</label>
+          <select id="reg-select-source" class="form-select"></select>
+        </div>
+        <div class="form-group" style="margin-top: 0.75rem;">
+          <label class="form-label" for="reg-select-reference">Reference Image (NASA LRO / SELENE / All)</label>
+          <select id="reg-select-reference" class="form-select"></select>
+        </div>
+      </div>
+
+      <!-- Feature Extraction Algorithm Selector -->
+      <div class="poc3-card">
+        <span class="section-title">FEATURE DETECTOR & DESCRIPTOR</span>
+        <div class="algorithm-pills" id="reg-algo-pills">
+          <button class="algo-pill active" data-method="SIFT">SIFT</button>
+          <button class="algo-pill" data-method="RootSIFT">RootSIFT</button>
+          <button class="algo-pill" data-method="ORB">ORB</button>
+          <button class="algo-pill" data-method="AKAZE">AKAZE</button>
+          <button class="algo-pill" data-method="PhaseCorrelation">Phase Correlation</button>
+        </div>
+        <div class="algo-info-box" id="algo-info-box">
+          <div class="algo-info-title" id="algo-info-name">SIFT (Scale-Invariant Feature Transform)</div>
+          <div class="algo-info-desc" id="algo-info-desc">Computes Difference-of-Gaussians scale space keypoints with 128D gradient histograms. Robust to scale, rotation, and illumination changes.</div>
+        </div>
+      </div>
+
+      <!-- Geometric Transformation Model -->
+      <div class="poc3-card">
+        <span class="section-title">GEOMETRIC MODEL</span>
+        <div class="toggle-pills" id="reg-transform-pills">
+          <button class="toggle-pill active" data-transform="Homography">Homography (3x3 Projective)</button>
+          <button class="toggle-pill" data-transform="Affine">Affine (2x3 Linear)</button>
+        </div>
+      </div>
+
+      <!-- Hyperparameters: RANSAC & Lowe's Ratio -->
+      <div class="poc3-card">
+        <span class="section-title">HYPERPARAMETERS</span>
+        <div class="slider-control" id="control-ratio-thresh">
+          <div class="slider-label-row">
+            <span>Lowe's Ratio Test</span>
+            <span class="slider-val-badge" id="val-ratio-thresh">0.75</span>
+          </div>
+          <input type="range" id="slider-ratio-thresh" min="0.50" max="0.95" step="0.05" value="0.75" class="range-slider">
+          <div class="slider-hint">Stricter ratio prunes ambiguous descriptor matches.</div>
+        </div>
+
+        <div class="slider-control" id="control-ransac-thresh" style="margin-top: 0.875rem;">
+          <div class="slider-label-row">
+            <span>RANSAC Inlier Threshold</span>
+            <span class="slider-val-badge" id="val-ransac-thresh">3.0 px</span>
+          </div>
+          <input type="range" id="slider-ransac-thresh" min="0.5" max="10.0" step="0.5" value="3.0" class="range-slider">
+          <div class="slider-hint">Max reprojection error for inlier consensus.</div>
+        </div>
+      </div>
+
+      <!-- Execution Button -->
+      <div class="poc3-card action-card">
+        <button class="btn btn-primary btn-run-registration" id="btn-execute-reg">
+          <span class="spinner-icon" id="reg-spinner" style="display:none;"></span>
+          <svg class="run-icon" id="reg-run-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"></polygon>
+          </svg>
+          <span id="reg-btn-label">RUN CLASSICAL REGISTRATION</span>
+        </button>
+        <div class="reg-status-bar" id="reg-status-bar">
+          <span class="status-dot online"></span>
+          <span id="reg-status-text">Ready for execution</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Interactive Viewport & Analysis Stage -->
+    <section class="poc3-stage">
+      <!-- Stage Toolbar -->
+      <div class="stage-toolbar">
+        <div class="view-mode-tabs" id="reg-view-tabs">
+          <button class="stage-tab active" data-view="matches">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12h16M12 4v16"></path><circle cx="6" cy="12" r="2"></circle><circle cx="18" cy="12" r="2"></circle></svg>
+            <span>Tie-Point Matches</span>
+          </button>
+          <button class="stage-tab" data-view="checkerboard">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18M3 15h18M9 3v18M15 3v18"></path></svg>
+            <span>Checkerboard Overlay</span>
+          </button>
+          <button class="stage-tab" data-view="warped">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 22 22 22 12 2"></polygon></svg>
+            <span>Warped Output</span>
+          </button>
+          <button class="stage-tab" data-view="sidebyside">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="9" height="18" rx="2"></rect><rect x="13" y="3" width="9" height="18" rx="2"></rect></svg>
+            <span>Dual Viewport</span>
+          </button>
+          <button class="stage-tab" data-view="swipe">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 7 3 12 8 17"></polyline><polyline points="16 7 21 12 16 17"></polyline><line x1="12" y1="3" x2="12" y2="21"></line></svg>
+            <span>Swipe Comparator</span>
+          </button>
+        </div>
+
+        <div class="stage-hud-controls">
+          <button class="btn-hud" id="btn-reg-zoom-in" title="Zoom In">+</button>
+          <button class="btn-hud" id="btn-reg-zoom-out" title="Zoom Out">&minus;</button>
+          <button class="btn-hud" id="btn-reg-zoom-reset" title="Reset Zoom (1:1)">1:1</button>
+          <button class="btn-hud" id="btn-reg-zoom-fit" title="Fit to Viewport">FIT</button>
+          <span class="hud-zoom-badge" id="reg-zoom-badge">100%</span>
+        </div>
+      </div>
+
+      <!-- Viewport Display Container -->
+      <div class="stage-viewport-container" id="reg-viewport-container">
+        <!-- Initial Blank / Instructions State -->
+        <div class="stage-empty-state" id="reg-empty-state">
+          <div class="empty-icon-orb">
+            <svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+          </div>
+          <h3>Classical Registration Engine Ready</h3>
+          <p>Select Chandrayaan-2 source and NASA reference observation, configure detector and RANSAC threshold, then click <strong>Run Classical Registration</strong>.</p>
+          <button class="btn btn-primary" id="btn-empty-quickrun" style="margin-top: 1rem;">
+            Run Default Boguslawsky Pair (SIFT)
+          </button>
+        </div>
+
+        <!-- Single Artifact Display (Matches, Checkerboard, Warped) -->
+        <div class="stage-view-single" id="reg-view-single" style="display:none;">
+          <div class="viewport-canvas-wrapper" id="reg-canvas-wrapper">
+            <img id="reg-artifact-img" class="viewport-zoom-img" alt="Registration Artifact" draggable="false">
+          </div>
+        </div>
+
+        <!-- Dual Side-by-Side Viewport -->
+        <div class="stage-view-dual" id="reg-view-dual" style="display:none;">
+          <div class="dual-pane">
+            <div class="pane-header">
+              <span class="pane-tag tag-src">SOURCE (CH2 OHRC)</span>
+              <span class="pane-sub" id="dual-src-sub">--</span>
+            </div>
+            <div class="pane-img-container" id="dual-src-container">
+              <img id="dual-src-img" class="dual-img" alt="Source" draggable="false">
+            </div>
+          </div>
+          <div class="dual-pane">
+            <div class="pane-header">
+              <span class="pane-tag tag-ref">REFERENCE (NASA LRO NAC)</span>
+              <span class="pane-sub" id="dual-ref-sub">--</span>
+            </div>
+            <div class="pane-img-container" id="dual-ref-container">
+              <img id="dual-ref-img" class="dual-img" alt="Reference" draggable="false">
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Swipe Comparator -->
+        <div class="stage-view-swipe" id="reg-view-swipe" style="display:none;">
+          <div class="swipe-container" id="swipe-container">
+            <img id="swipe-img-bottom" class="swipe-img bottom" alt="Registered Reference" draggable="false">
+            <div class="swipe-overlay" id="swipe-overlay">
+              <img id="swipe-img-top" class="swipe-img top" alt="Source Image" draggable="false">
+            </div>
+            <div class="swipe-handle" id="swipe-handle">
+              <div class="handle-line"></div>
+              <div class="handle-circle">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <polyline points="8 7 3 12 8 17"></polyline>
+                  <polyline points="16 7 21 12 16 17"></polyline>
+                </svg>
+              </div>
+            </div>
+          </div>
+          <div class="swipe-badge swipe-badge-left">SOURCE (CH2)</div>
+          <div class="swipe-badge swipe-badge-right">WARPED ALIGNED (REF)</div>
+        </div>
+
+        <!-- Loading Overlay -->
+        <div class="stage-loading-overlay" id="reg-loading-overlay" style="display:none;">
+          <div class="loading-spinner"></div>
+          <div class="loading-title">Executing Registration Pipeline</div>
+          <div class="loading-step" id="reg-loading-step">Detecting scale-space keypoints & descriptors...</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Telemetry & Scientific Verification Panel -->
+    <aside class="poc3-metrics-panel">
+      <div class="metrics-panel-header">
+        <div class="poc3-header-tag">SCIENTIFIC TELEMETRY</div>
+        <h2 class="poc3-title">Alignment Metrics</h2>
+        <div class="reg-job-badge" id="reg-job-id">Job: --</div>
+      </div>
+
+      <!-- Key Performance Indicators Grid -->
+      <div class="kpi-grid">
+        <!-- Match Count -->
+        <div class="kpi-card">
+          <span class="kpi-label">TOTAL MATCHES</span>
+          <span class="kpi-value text-cyan" id="kpi-match-count">--</span>
+          <span class="kpi-hint">Lowe's ratio test filtered</span>
+        </div>
+
+        <!-- Inlier Count & Ratio -->
+        <div class="kpi-card">
+          <span class="kpi-label">RANSAC INLIERS</span>
+          <span class="kpi-value text-green" id="kpi-inlier-count">--</span>
+          <div class="kpi-ratio-row">
+            <span class="kpi-ratio-val" id="kpi-inlier-ratio">--%</span>
+            <span class="confidence-badge" id="kpi-confidence">IDLE</span>
+          </div>
+        </div>
+
+        <!-- Reprojection RMSE -->
+        <div class="kpi-card">
+          <span class="kpi-label">REPROJECTION RMSE</span>
+          <span class="kpi-value text-amber" id="kpi-rmse">-- px</span>
+          <span class="kpi-hint" id="kpi-subpixel-tag">Sub-pixel target: &le; 1.0 px</span>
+        </div>
+
+        <!-- Execution Runtime -->
+        <div class="kpi-card">
+          <span class="kpi-label">EXECUTION TIME</span>
+          <span class="kpi-value" id="kpi-runtime">-- ms</span>
+          <span class="kpi-hint">Deterministic CPU backend</span>
+        </div>
+      </div>
+
+      <!-- Estimated Geometric Distortion -->
+      <div class="poc3-card">
+        <span class="section-title">ESTIMATED GEOMETRY</span>
+        <div class="geom-rows">
+          <div class="geom-row">
+            <span class="geom-label">Rotation Angle (&Delta;&theta;):</span>
+            <span class="geom-val text-cyan" id="geom-rotation">--°</span>
+          </div>
+          <div class="geom-row">
+            <span class="geom-label">Scale Factor (sx, sy):</span>
+            <span class="geom-val" id="geom-scale">--</span>
+          </div>
+          <div class="geom-row">
+            <span class="geom-label">Translation (&Delta;x, &Delta;y):</span>
+            <span class="geom-val" id="geom-translation">-- px</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transformation Matrix Inspector -->
+      <div class="poc3-card">
+        <div class="poc3-card-header">
+          <span class="section-title">TRANSFORMATION MATRIX</span>
+          <span class="matrix-type-tag" id="matrix-type-tag">3x3 HOMOGRAPHY</span>
+        </div>
+        <div class="matrix-container" id="matrix-display">
+          <div class="matrix-empty">No active transformation</div>
+        </div>
+      </div>
+
+      <!-- Actions & Downloads -->
+      <div class="poc3-card">
+        <span class="section-title">EXPORT VERIFICATION ARTIFACTS</span>
+        <div class="export-btn-stack">
+          <a class="btn btn-outline btn-export" id="btn-export-warped" target="_blank" download>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download Warped Image (PNG)</span>
+          </a>
+          <a class="btn btn-outline btn-export" id="btn-export-matches" target="_blank" download>
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download Tie-Points (PNG)</span>
+          </a>
+          <button class="btn btn-outline btn-export" id="btn-export-json">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span>Export Metrics (JSON)</span>
           </button>
         </div>
       </div>

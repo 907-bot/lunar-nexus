@@ -373,16 +373,27 @@ class LunarDataHTTPHandler(SimpleHTTPRequestHandler):
                     s_set.update([x.strip().upper() for x in sp.split(",") if x.strip()])
                 sensors_list = list(s_set)
 
+            def _safe_float(val: str | None) -> float | None:
+                if val is None:
+                    return None
+                try:
+                    return float(val)
+                except (ValueError, TypeError):
+                    return None
+
             mission = qs.get("mission", [None])[0]
-            min_lat = float(qs["min_lat"][0]) if "min_lat" in qs else None
-            max_lat = float(qs["max_lat"][0]) if "max_lat" in qs else None
-            min_lon = float(qs["min_lon"][0]) if "min_lon" in qs else None
-            max_lon = float(qs["max_lon"][0]) if "max_lon" in qs else None
-            min_res = float(qs["min_res"][0]) if "min_res" in qs else None
-            max_res = float(qs["max_res"][0]) if "max_res" in qs else None
+            min_lat = _safe_float(qs.get("min_lat", [None])[0])
+            max_lat = _safe_float(qs.get("max_lat", [None])[0])
+            min_lon = _safe_float(qs.get("min_lon", [None])[0])
+            max_lon = _safe_float(qs.get("max_lon", [None])[0])
+            min_res = _safe_float(qs.get("min_res", [None])[0])
+            max_res = _safe_float(qs.get("max_res", [None])[0])
             q = qs.get("q", [None])[0]
-            limit = int(qs.get("limit", [50])[0])
-            offset = int(qs.get("offset", [0])[0])
+            try:
+                limit = int(qs.get("limit", [50])[0])
+                offset = int(qs.get("offset", [0])[0])
+            except (ValueError, TypeError):
+                limit, offset = 50, 0
 
             result = data_service.query(
                 sensors=sensors_list,
@@ -446,7 +457,6 @@ class LunarDataHTTPHandler(SimpleHTTPRequestHandler):
 
                 self._send_json(404, {"error": "Preview image file not found on disk"})
                 return
-
             else:
                 product_id = rest
                 obs = data_service.observations.get(product_id)
@@ -456,7 +466,47 @@ class LunarDataHTTPHandler(SimpleHTTPRequestHandler):
                     self._send_json(404, {"error": f"Observation {product_id} not found"})
                 return
 
-        # 6. Web App UI Serving
+        # 6. POC 3: Classical Registration API
+        if path == "/api/v1/registration/methods":
+            self._send_json(200, {
+                "algorithms": [
+                    {"id": "SIFT", "name": "SIFT (Scale-Invariant Feature Transform)", "type": "Gradient / Scale-space", "best_for": "General terrain registration"},
+                    {"id": "RootSIFT", "name": "RootSIFT (Hellinger L1-Root Normalization)", "type": "Hellinger Kernel", "best_for": "Planar regolith & illumination variance"},
+                    {"id": "ORB", "name": "ORB (Oriented FAST & Rotated BRIEF)", "type": "Binary Descriptor", "best_for": "Real-time embedded processing"},
+                    {"id": "AKAZE", "name": "AKAZE (Accelerated KAZE in Non-linear Scale Space)", "type": "Non-linear diffusion", "best_for": "High-contrast crater boundary preservation"},
+                    {"id": "PhaseCorrelation", "name": "2D FFT Phase Correlation", "type": "Frequency Domain", "best_for": "Direct translation & sub-pixel shift"},
+                ],
+                "transforms": ["Homography", "Affine"],
+            })
+            return
+
+        if path.startswith("/api/v1/registration/"):
+            from services.registration.server import registration_service, JOBS_DIR
+            parts = path.strip("/").split("/")
+            if len(parts) == 5:
+                _, _, _, job_id, artifact = parts
+                job_dir = JOBS_DIR / job_id
+                target_img = job_dir / f"{artifact}.png"
+                if target_img.exists():
+                    self.path = str(target_img.relative_to(WORKSPACE_ROOT)).replace("\\", "/")
+                    return super().do_GET()
+                else:
+                    self._send_json(404, {"error": f"Artifact '{artifact}' for job {job_id} not found"})
+                    return
+            elif len(parts) == 4:
+                job_id = parts[3]
+                if job_id in registration_service.jobs_cache:
+                    self._send_json(200, registration_service.jobs_cache[job_id])
+                    return
+                job_file = JOBS_DIR / job_id / "result.json"
+                if job_file.exists():
+                    with open(job_file, "r", encoding="utf-8") as f:
+                        self._send_json(200, json.load(f))
+                    return
+                self._send_json(404, {"error": f"Job {job_id} not found"})
+                return
+
+        # 7. Web App UI Serving
         if path == "/" or path == "/index.html":
             index_file = WEB_DIR / "index.html"
             if index_file.exists():
@@ -484,6 +534,54 @@ class LunarDataHTTPHandler(SimpleHTTPRequestHandler):
 
         # Fallback to standard directory server for images in data/raw/...
         return super().do_GET()
+
+    def do_OPTIONS(self):
+        self.send_response(204)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "*")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.end_headers()
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        path = parsed.path
+
+        if path == "/api/v1/register":
+            from services.registration.server import registration_service
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                data = json.loads(body) if body else {}
+            except Exception as e:
+                self._send_json(400, {"error": f"Invalid JSON payload: {e}"})
+                return
+
+            source_id = data.get("source_product_id") or data.get("source_image") or data.get("source_id") or "ch2_ohr_ncp_20230915t041230_boguslawsky_d18"
+            reference_id = data.get("reference_product_id") or data.get("reference_image") or data.get("reference_id") or "M1345982701LR_BOGUSLAWSKY_REF"
+            method = data.get("method", "SIFT")
+            transform_type = data.get("transform_type", "Homography")
+            try:
+                ratio_thresh = float(data.get("ratio_test_thresh") or data.get("ratio_thresh") or 0.75)
+                ransac_thresh = float(data.get("ransac_thresh_px") or data.get("ransac_thresh") or 3.0)
+            except (ValueError, TypeError):
+                ratio_thresh = 0.75
+                ransac_thresh = 3.0
+
+            try:
+                result = registration_service.execute_registration(
+                    source_id=source_id,
+                    reference_id=reference_id,
+                    method_str=method,
+                    transform_type_str=transform_type,
+                    ratio_thresh=ratio_thresh,
+                    ransac_thresh_px=ransac_thresh,
+                )
+                self._send_json(200, result)
+            except Exception as e:
+                self._send_json(500, {"error": f"Registration failed: {str(e)}"})
+            return
+
+        self._send_json(404, {"error": "Endpoint not found"})
 
 
 def run_server(port: int = 8080):

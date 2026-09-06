@@ -1,0 +1,49 @@
+{
+  "job_id": "a31eab09",
+  "status": "COMPLETED",
+  "source_id": "ch2_ohr_ncp_20230823t123015_shackleton_rim",
+  "reference_id": "M1123456789_SHACKLETON_REF",
+  "method": "SIFT",
+  "transform_type": "Homography",
+  "metrics": {
+    "match_count": 547,
+    "inlier_count": 545,
+    "inlier_ratio_pct": 99.63,
+    "reprojection_rmse_px": 0.0295,
+    "runtime_ms": 361.59,
+    "confidence_level": "HIGH",
+    "estimated_rotation_deg": -0.0,
+    "estimated_scale": {
+      "sx": 1.0,
+      "sy": 1.0
+    },
+    "estimated_translation_px": {
+      "dx": 0.0,
+      "dy": 0.01
+    },
+    "is_registration_successful": true
+  },
+  "transformation_matrix": [
+    [
+      0.9999710925238727,
+      -5.7323372166991415e-06,
+      0.003214753433964487
+    ],
+    [
+      -8.48926959699171e-06,
+      0.999972332719215,
+      0.007516094391832376
+    ],
+    [
+      -1.909701073829846e-08,
+      -1.599434614669937e-08,
+      1.0
+    ]
+  ],
+  "artifacts": {
+    "warped_url": "/api/v1/registration/a31eab09/warped",
+    "matches_url": "/api/v1/registration/a31eab09/matches",
+    "checkerboard_url": "/api/v1/registration/a31eab09/checkerboard"
+  },
+  "timestamp": "2026-09-06T03:16:20.936606+00:00"
+}

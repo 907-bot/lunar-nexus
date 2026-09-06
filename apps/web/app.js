@@ -233,6 +233,9 @@ async function fetchObservations() {
     if (state.observations.length > 0 && !state.selectedObservation) {
       selectObservation(state.observations[0], false);
     }
+
+    // Populate POC3 registration dropdowns with all observations
+    populateRegistrationDropdowns(true);
   } catch (e) {
     console.error('Error fetching observations:', e);
     elements.observationList.innerHTML = `<div class="loading-state">Error loading catalog: ${e.message}</div>`;
@@ -1527,9 +1530,14 @@ function renderPairModal() {
       
       <div class="pair-meta-footer">
         <span>Intersection BBox: Lat [${pair.intersection_bbox.min_lat}° to ${pair.intersection_bbox.max_lat}°], Lon [${pair.intersection_bbox.min_lon}° to ${pair.intersection_bbox.max_lon}°]</span>
-        <button class="btn btn-primary btn-inspect-pair-btn" data-src="${pair.source_product_id}">
-          Focus on Map
-        </button>
+        <div style="display:flex; gap:0.5rem;">
+          <button class="btn btn-outline btn-poc3-pair-btn" data-src="${pair.source_product_id}" data-ref="${pair.reference_product_id}">
+            Register in POC 3 ➔
+          </button>
+          <button class="btn btn-primary btn-inspect-pair-btn" data-src="${pair.source_product_id}">
+            Focus on Map
+          </button>
+        </div>
       </div>
     `;
     
@@ -1540,10 +1548,786 @@ function renderPairModal() {
         selectObservation(srcObs, true);
       }
     });
+
+    card.querySelector('.btn-poc3-pair-btn').addEventListener('click', () => {
+      elements.modalPairBackdrop.style.display = 'none';
+      switchModule('poc3');
+      poc3SetSelectedPair(pair.source_product_id, pair.reference_product_id);
+    });
     
     elements.modalPairsContainer.appendChild(card);
   });
 }
 
+/* ==========================================================================
+   POC 3: Classical Registration Engine Client Controller
+   Deterministic Scientific Registration & Multi-Viewport Suite
+   ========================================================================== */
+
+const ALGORITHM_DOCS = {
+  SIFT: {
+    name: "SIFT (Scale-Invariant Feature Transform)",
+    desc: "Computes Difference-of-Gaussians (DoG) scale-space extrema with 128D gradient histograms. Invariant to uniform scale, rotation, and illumination shifts across crater slopes."
+  },
+  RootSIFT: {
+    name: "RootSIFT (L1-Square-Root Hellinger Kernel)",
+    desc: "Applies L1 normalization followed by square-rooting SIFT descriptors. Eliminates Euclidean distance distortion for extreme solar incidence angle variations."
+  },
+  ORB: {
+    name: "ORB (Oriented FAST & Rotated BRIEF)",
+    desc: "Ultra-fast 256-bit binary descriptors with intensity centroid orientation. Optimized for high-throughput spaceborne embedded registration at low computational overhead."
+  },
+  AKAZE: {
+    name: "AKAZE (Accelerated Fast Explicit Diffusion)",
+    desc: "Extracts keypoints in nonlinear scale spaces using Fast Explicit Diffusion (FED). Preserves lunar crater rim sharp boundaries without Gaussian blur artifacts."
+  },
+  PhaseCorrelation: {
+    name: "Phase Correlation (2D FFT Translation)",
+    desc: "Fourier-domain phase shift estimator with Hanning windowing. Computes sub-pixel translation (dx, dy) invariant to monotonic intensity drifts."
+  }
+};
+
+const poc3State = {
+  currentModule: 'layer1', // 'layer1' or 'poc3'
+  selectedSourceId: null,
+  selectedRefId: null,
+  selectedMethod: 'SIFT',
+  selectedTransform: 'Homography',
+  ratioThresh: 0.75,
+  ransacThresh: 3.0,
+  activeViewTab: 'matches', // 'matches', 'checkerboard', 'warped', 'sidebyside', 'swipe'
+  isExecuting: false,
+  currentJob: null,
+  
+  // Interactive Viewport Pan & Zoom
+  zoom: 1.0,
+  panX: 0,
+  panY: 0,
+  isDraggingCanvas: false,
+  dragStartX: 0,
+  dragStartY: 0,
+
+  // Swipe Comparator
+  swipePercent: 50,
+  isSwiping: false,
+};
+
+// Mode Switcher between Layer 1 Explorer and POC 3 Registration Engine
+function switchModule(moduleName) {
+  poc3State.currentModule = moduleName;
+
+  const btnLayer1 = document.getElementById('btn-nav-layer1');
+  const btnPoc3 = document.getElementById('btn-nav-poc3');
+  const wsLayer1 = document.getElementById('layer1-workspace');
+  const wsPoc3 = document.getElementById('poc3-workspace');
+  const modTag = document.getElementById('app-module-tag');
+  const modTitle = document.getElementById('app-module-title');
+
+  if (moduleName === 'poc3') {
+    btnLayer1?.classList.remove('active');
+    btnPoc3?.classList.add('active');
+    if (wsLayer1) wsLayer1.style.display = 'none';
+    if (wsPoc3) wsPoc3.style.display = 'grid';
+    if (modTag) modTag.textContent = 'POC 3 MICROSERVICE';
+    if (modTitle) modTitle.textContent = 'NEXUS-LUNAR // CLASSICAL REGISTRATION';
+    populateRegistrationDropdowns();
+  } else {
+    btnLayer1?.classList.add('active');
+    btnPoc3?.classList.remove('active');
+    if (wsLayer1) wsLayer1.style.display = 'grid';
+    if (wsPoc3) wsPoc3.style.display = 'none';
+    if (modTag) modTag.textContent = 'LAYER 1 MICROSERVICE';
+    if (modTitle) modTitle.textContent = 'NEXUS-LUNAR // DATA EXPLORER';
+
+    // Trigger canvas resize for 2D/3D map
+    setTimeout(() => {
+      resizeMapCanvas();
+      renderMap();
+      if (state.viewMode === '3D') renderGlobe();
+    }, 50);
+  }
+}
+
+// Populate Source and Reference Select Dropdowns with All Available Observations
+function populateRegistrationDropdowns(force = false) {
+  const selSrc = document.getElementById('reg-select-source');
+  const selRef = document.getElementById('reg-select-reference');
+  if (!selSrc || !selRef) return;
+
+  if (!state.observations || state.observations.length === 0) return;
+
+  // Don't skip if force is true or if dropdown has only 1 or 0 options
+  if (!force && selSrc.options.length > 3 && selRef.options.length > 3) return;
+
+  const currentSrc = selSrc.value || poc3State.selectedSourceId;
+  const currentRef = selRef.value || poc3State.selectedRefId;
+
+  selSrc.innerHTML = '';
+  selRef.innerHTML = '';
+
+  const isCh2 = (o) => {
+    const m = String(o.mission || '').toUpperCase();
+    const s = String(o.sensor || '').toUpperCase();
+    return m.includes('CHANDRAYAAN') || s.startsWith('OHRC') || s.startsWith('TMC');
+  };
+
+  const ch2Obs = state.observations.filter(isCh2);
+  const otherObs = state.observations.filter(o => !isCh2(o));
+
+  // 1. Source Dropdown: Chandrayaan-2 (ISRO) Source Images first, followed by all other missions
+  if (ch2Obs.length > 0) {
+    const grpCh2 = document.createElement('optgroup');
+    grpCh2.label = '── Chandrayaan-2 (ISRO) Source Images ──';
+    ch2Obs.forEach(obs => {
+      const opt = document.createElement('option');
+      opt.value = obs.product_id;
+      opt.textContent = `${obs.sensor} - ${obs.product_id} (${obs.spatial_resolution_m}m)`;
+      grpCh2.appendChild(opt);
+    });
+    selSrc.appendChild(grpCh2);
+  }
+
+  if (otherObs.length > 0) {
+    const grpOther = document.createElement('optgroup');
+    grpOther.label = '── Other Lunar Observations (NASA LRO / SELENE) ──';
+    otherObs.forEach(obs => {
+      const opt = document.createElement('option');
+      opt.value = obs.product_id;
+      opt.textContent = `${obs.sensor} - ${obs.product_id} (${obs.spatial_resolution_m}m)`;
+      grpOther.appendChild(opt);
+    });
+    selSrc.appendChild(grpOther);
+  }
+
+  // Fallback if no optgroups added
+  if (selSrc.options.length === 0) {
+    state.observations.forEach(obs => {
+      const opt = document.createElement('option');
+      opt.value = obs.product_id;
+      opt.textContent = `${obs.sensor} - ${obs.product_id} (${obs.spatial_resolution_m}m)`;
+      selSrc.appendChild(opt);
+    });
+  }
+
+  // 2. Reference Dropdown: NASA LRO & SELENE first, followed by Chandrayaan-2 observations
+  if (otherObs.length > 0) {
+    const grpRef = document.createElement('optgroup');
+    grpRef.label = '── NASA LRO & Reference Missions ──';
+    otherObs.forEach(obs => {
+      const opt = document.createElement('option');
+      opt.value = obs.product_id;
+      opt.textContent = `${obs.sensor} - ${obs.product_id} (${obs.spatial_resolution_m}m)`;
+      grpRef.appendChild(opt);
+    });
+    selRef.appendChild(grpRef);
+  }
+
+  if (ch2Obs.length > 0) {
+    const grpCh2Ref = document.createElement('optgroup');
+    grpCh2Ref.label = '── Chandrayaan-2 Images ──';
+    ch2Obs.forEach(obs => {
+      const opt = document.createElement('option');
+      opt.value = obs.product_id;
+      opt.textContent = `${obs.sensor} - ${obs.product_id} (${obs.spatial_resolution_m}m)`;
+      grpCh2Ref.appendChild(opt);
+    });
+    selRef.appendChild(grpCh2Ref);
+  }
+
+  if (selRef.options.length === 0) {
+    state.observations.forEach(obs => {
+      const opt = document.createElement('option');
+      opt.value = obs.product_id;
+      opt.textContent = `${obs.sensor} - ${obs.product_id} (${obs.spatial_resolution_m}m)`;
+      selRef.appendChild(opt);
+    });
+  }
+
+  // Restore selection or select default Boguslawsky pair
+  if (currentSrc) {
+    selSrc.value = currentSrc;
+  }
+  if (!selSrc.value && selSrc.options.length > 0) {
+    poc3SetDefaultBoguslawskyPair();
+  } else {
+    poc3State.selectedSourceId = selSrc.value;
+  }
+
+  if (currentRef) {
+    selRef.value = currentRef;
+  }
+  if (!selRef.value && selRef.options.length > 0) {
+    poc3SetDefaultBoguslawskyPair();
+  } else {
+    poc3State.selectedRefId = selRef.value;
+  }
+
+  updateRegistrationPairDisplay();
+}
+
+function poc3SetDefaultBoguslawskyPair() {
+  const selSrc = document.getElementById('reg-select-source');
+  const selRef = document.getElementById('reg-select-reference');
+  if (!selSrc || !selRef) return;
+
+  const defaultSrc = "ch2_ohr_ncp_20230915t041230_boguslawsky_d18";
+  const defaultRef = "M1345982701LR_BOGUSLAWSKY_REF";
+
+  let foundSrc = false;
+  let foundRef = false;
+
+  for (let i = 0; i < selSrc.options.length; i++) {
+    if (selSrc.options[i].value === defaultSrc) {
+      selSrc.selectedIndex = i;
+      foundSrc = true;
+      break;
+    }
+  }
+
+  for (let i = 0; i < selRef.options.length; i++) {
+    if (selRef.options[i].value === defaultRef) {
+      selRef.selectedIndex = i;
+      foundRef = true;
+      break;
+    }
+  }
+
+  if (!foundSrc && selSrc.options.length > 0) selSrc.selectedIndex = 0;
+  if (!foundRef && selRef.options.length > 0) selRef.selectedIndex = 0;
+
+  poc3State.selectedSourceId = selSrc.value;
+  poc3State.selectedRefId = selRef.value;
+
+  updateRegistrationPairDisplay();
+}
+
+function updateRegistrationPairDisplay() {
+  const srcId = poc3State.selectedSourceId;
+  const refId = poc3State.selectedRefId;
+
+  const srcObs = state.observations.find(o => o.product_id === srcId);
+  const refObs = state.observations.find(o => o.product_id === refId);
+
+  const dualSrcSub = document.getElementById('dual-src-sub');
+  const dualRefSub = document.getElementById('dual-ref-sub');
+  if (dualSrcSub && srcObs) {
+    dualSrcSub.textContent = `${srcObs.sensor} - ${srcObs.product_id} (${srcObs.spatial_resolution_m}m)`;
+  }
+  if (dualRefSub && refObs) {
+    dualRefSub.textContent = `${refObs.sensor} - ${refObs.product_id} (${refObs.spatial_resolution_m}m)`;
+  }
+
+  const swipeBottom = document.getElementById('swipe-img-bottom');
+  const swipeTop = document.getElementById('swipe-img-top');
+  if (swipeTop && srcObs) {
+    swipeTop.src = `/api/v1/observations/${srcObs.product_id}/preview`;
+  }
+  if (swipeBottom && refObs) {
+    swipeBottom.src = `/api/v1/observations/${refObs.product_id}/preview`;
+  }
+}
+
+function poc3SetSelectedPair(srcId, refId) {
+  populateRegistrationDropdowns(true);
+  const selSrc = document.getElementById('reg-select-source');
+  const selRef = document.getElementById('reg-select-reference');
+
+  if (selSrc && srcId) {
+    for (let i = 0; i < selSrc.options.length; i++) {
+      if (selSrc.options[i].value === srcId) {
+        selSrc.selectedIndex = i;
+        break;
+      }
+    }
+    poc3State.selectedSourceId = srcId;
+  }
+
+  if (selRef && refId) {
+    for (let i = 0; i < selRef.options.length; i++) {
+      if (selRef.options[i].value === refId) {
+        selRef.selectedIndex = i;
+        break;
+      }
+    }
+    poc3State.selectedRefId = refId;
+  }
+
+  updateRegistrationPairDisplay();
+}
+
+// Execute Classical Registration Engine API Call
+async function executeRegistration() {
+  const selSrc = document.getElementById('reg-select-source');
+  const selRef = document.getElementById('reg-select-reference');
+  const srcId = selSrc ? selSrc.value : poc3State.selectedSourceId;
+  const refId = selRef ? selRef.value : poc3State.selectedRefId;
+
+  if (!srcId || !refId) {
+    alert("Please select both a Source image and a Reference image.");
+    return;
+  }
+
+  poc3State.isExecuting = true;
+  const btnRun = document.getElementById('btn-execute-reg');
+  const btnSpinner = document.getElementById('reg-spinner');
+  const btnIcon = document.getElementById('reg-run-icon');
+  const btnLabel = document.getElementById('reg-btn-label');
+  const statusDot = document.querySelector('.reg-status-bar .status-dot');
+  const statusText = document.getElementById('reg-status-text');
+  const loadingOverlay = document.getElementById('reg-loading-overlay');
+  const loadingStep = document.getElementById('reg-loading-step');
+
+  if (btnRun) btnRun.disabled = true;
+  if (btnSpinner) btnSpinner.style.display = 'inline-block';
+  if (btnIcon) btnIcon.style.display = 'none';
+  if (btnLabel) btnLabel.textContent = 'EXECUTING PIPELINE...';
+  if (statusDot) {
+    statusDot.className = 'status-dot working';
+  }
+  if (statusText) statusText.textContent = `Running ${poc3State.selectedMethod} registration...`;
+  if (loadingOverlay) loadingOverlay.style.display = 'flex';
+  if (loadingStep) loadingStep.textContent = `Extracting ${poc3State.selectedMethod} scale-space features & descriptors...`;
+
+  const payload = {
+    source_image: srcId,
+    reference_image: refId,
+    method: poc3State.selectedMethod,
+    transform_type: poc3State.selectedTransform,
+    ratio_thresh: poc3State.ratioThresh,
+    ransac_thresh_px: poc3State.ransacThresh,
+    max_features: 4000,
+  };
+
+  try {
+    const response = await fetch('/api/v1/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || `HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    poc3State.currentJob = data;
+    renderRegistrationResults(data);
+
+    if (statusDot) statusDot.className = 'status-dot online';
+    if (statusText) statusText.textContent = `Completed in ${data.metrics?.runtime_ms || '--'} ms`;
+  } catch (error) {
+    console.error("Registration failed:", error);
+    alert(`Registration error: ${error.message}`);
+    if (statusDot) statusDot.className = 'status-dot';
+    if (statusText) statusText.textContent = `Error: ${error.message}`;
+  } finally {
+    poc3State.isExecuting = false;
+    if (btnRun) btnRun.disabled = false;
+    if (btnSpinner) btnSpinner.style.display = 'none';
+    if (btnIcon) btnIcon.style.display = 'inline-block';
+    if (btnLabel) btnLabel.textContent = 'RUN CLASSICAL REGISTRATION';
+    if (loadingOverlay) loadingOverlay.style.display = 'none';
+  }
+}
+
+// Render Registration Output Telemetry, Matrices, and Visualizers
+function renderRegistrationResults(data) {
+  const m = data.metrics || {};
+  const artifacts = data.artifacts || {};
+
+  // 1. Hide empty state
+  const emptyState = document.getElementById('reg-empty-state');
+  if (emptyState) emptyState.style.display = 'none';
+
+  // 2. Scientific Telemetry HUD Readouts
+  const jobBadge = document.getElementById('reg-job-id');
+  if (jobBadge) jobBadge.textContent = `Job: ${data.job_id} (${data.method})`;
+
+  const kpiMatch = document.getElementById('kpi-match-count');
+  if (kpiMatch) kpiMatch.textContent = m.match_count != null ? m.match_count.toLocaleString() : '--';
+
+  const kpiInlier = document.getElementById('kpi-inlier-count');
+  if (kpiInlier) kpiInlier.textContent = m.inlier_count != null ? m.inlier_count.toLocaleString() : '--';
+
+  const kpiRatio = document.getElementById('kpi-inlier-ratio');
+  if (kpiRatio) kpiRatio.textContent = m.inlier_ratio_pct != null ? `${m.inlier_ratio_pct.toFixed(1)}%` : '--%';
+
+  const kpiConf = document.getElementById('kpi-confidence');
+  if (kpiConf) {
+    const conf = m.confidence_level || 'LOW';
+    kpiConf.textContent = conf;
+    kpiConf.className = `confidence-badge ${conf}`;
+  }
+
+  const kpiRmse = document.getElementById('kpi-rmse');
+  if (kpiRmse) {
+    const rmse = m.reprojection_rmse_px != null ? m.reprojection_rmse_px.toFixed(3) : '--';
+    kpiRmse.textContent = `${rmse} px`;
+  }
+
+  const kpiSubpixel = document.getElementById('kpi-subpixel-tag');
+  if (kpiSubpixel && m.reprojection_rmse_px != null) {
+    kpiSubpixel.textContent = m.reprojection_rmse_px < 1.0 ? '✓ Sub-pixel precision achieved' : 'Pixel-level convergence';
+    kpiSubpixel.style.color = m.reprojection_rmse_px < 1.0 ? '#10b981' : 'var(--text-muted)';
+  }
+
+  const kpiRuntime = document.getElementById('kpi-runtime');
+  if (kpiRuntime) kpiRuntime.textContent = m.runtime_ms != null ? `${m.runtime_ms.toFixed(1)} ms` : '-- ms';
+
+  // 3. Estimated Geometry Readouts
+  const geomRot = document.getElementById('geom-rotation');
+  if (geomRot) {
+    const rot = m.estimated_rotation_deg != null ? m.estimated_rotation_deg : 0.0;
+    geomRot.textContent = `${rot > 0 ? '+' : ''}${rot.toFixed(3)}°`;
+  }
+
+  const geomScale = document.getElementById('geom-scale');
+  if (geomScale && m.estimated_scale) {
+    geomScale.textContent = `sx: ${m.estimated_scale.sx.toFixed(4)}, sy: ${m.estimated_scale.sy.toFixed(4)}`;
+  }
+
+  const geomTrans = document.getElementById('geom-translation');
+  if (geomTrans && m.estimated_translation_px) {
+    geomTrans.textContent = `Δx: ${m.estimated_translation_px.dx.toFixed(2)}px, Δy: ${m.estimated_translation_px.dy.toFixed(2)}px`;
+  }
+
+  // 4. Matrix Display Table
+  const matrixContainer = document.getElementById('matrix-display');
+  const matrixTypeTag = document.getElementById('matrix-type-tag');
+  if (matrixTypeTag) matrixTypeTag.textContent = `${data.transform_type.toUpperCase()}`;
+
+  if (matrixContainer && data.transformation_matrix) {
+    const M = data.transformation_matrix;
+    let tableHtml = '<table class="matrix-table">';
+    for (let r = 0; r < M.length; r++) {
+      tableHtml += '<tr>';
+      for (let c = 0; c < M[r].length; c++) {
+        const val = M[r][c];
+        const formatted = Math.abs(val) < 0.0001 && val !== 0 ? val.toExponential(3) : val.toFixed(4);
+        tableHtml += `<td>${formatted}</td>`;
+      }
+      tableHtml += '</tr>';
+    }
+    tableHtml += '</table>';
+    matrixContainer.innerHTML = tableHtml;
+  }
+
+  // 5. Download / Export Buttons
+  const btnExportWarped = document.getElementById('btn-export-warped');
+  if (btnExportWarped && artifacts.warped_url) {
+    btnExportWarped.href = artifacts.warped_url;
+  }
+  const btnExportMatches = document.getElementById('btn-export-matches');
+  if (btnExportMatches && artifacts.matches_url) {
+    btnExportMatches.href = artifacts.matches_url;
+  }
+
+  // 6. Update Active Stage View
+  updateStageView();
+}
+
+// Switch Stage Viewport Tab (Matches, Checkerboard, Warped, Dual, Swipe)
+function updateStageView() {
+  const job = poc3State.currentJob;
+  if (!job) return;
+
+  const viewTab = poc3State.activeViewTab;
+  const viewSingle = document.getElementById('reg-view-single');
+  const viewDual = document.getElementById('reg-view-dual');
+  const viewSwipe = document.getElementById('reg-view-swipe');
+  const artImg = document.getElementById('reg-artifact-img');
+
+  // Reset zoom & pan on tab change
+  poc3ResetZoom();
+
+  if (viewTab === 'matches' || viewTab === 'checkerboard' || viewTab === 'warped') {
+    if (viewSingle) viewSingle.style.display = 'flex';
+    if (viewDual) viewDual.style.display = 'none';
+    if (viewSwipe) viewSwipe.style.display = 'none';
+
+    let targetUrl = '';
+    if (viewTab === 'matches') targetUrl = job.artifacts?.matches_url || job.artifacts?.warped_url;
+    else if (viewTab === 'checkerboard') targetUrl = job.artifacts?.checkerboard_url;
+    else if (viewTab === 'warped') targetUrl = job.artifacts?.warped_url;
+
+    if (artImg && targetUrl) {
+      // Add timestamp to prevent browser cache
+      artImg.src = `${targetUrl}?t=${Date.now()}`;
+    }
+  } else if (viewTab === 'sidebyside') {
+    if (viewSingle) viewSingle.style.display = 'none';
+    if (viewDual) viewDual.style.display = 'grid';
+    if (viewSwipe) viewSwipe.style.display = 'none';
+
+    const dualSrcImg = document.getElementById('dual-src-img');
+    const dualRefImg = document.getElementById('dual-ref-img');
+    const dualSrcSub = document.getElementById('dual-src-sub');
+    const dualRefSub = document.getElementById('dual-ref-sub');
+
+    const srcObs = state.observations.find(o => o.product_id === (document.getElementById('reg-select-source')?.value || poc3State.selectedSourceId));
+    const refObs = state.observations.find(o => o.product_id === (document.getElementById('reg-select-reference')?.value || poc3State.selectedRefId));
+
+    if (dualSrcSub && srcObs) dualSrcSub.textContent = `${srcObs.product_id} (${srcObs.spatial_resolution_m}m)`;
+    if (dualRefSub && refObs) dualRefSub.textContent = `${refObs.product_id} (${refObs.spatial_resolution_m}m)`;
+
+    if (dualSrcImg && srcObs) {
+      dualSrcImg.src = `/api/v1/observations/${srcObs.product_id}/preview`;
+    }
+    if (dualRefImg && refObs) {
+      dualRefImg.src = `/api/v1/observations/${refObs.product_id}/preview`;
+    }
+  } else if (viewTab === 'swipe') {
+    if (viewSingle) viewSingle.style.display = 'none';
+    if (viewDual) viewDual.style.display = 'none';
+    if (viewSwipe) viewSwipe.style.display = 'flex';
+
+    const swipeBottom = document.getElementById('swipe-img-bottom');
+    const swipeTop = document.getElementById('swipe-img-top');
+    const srcObs = state.observations.find(o => o.product_id === (document.getElementById('reg-select-source')?.value || poc3State.selectedSourceId));
+
+    if (swipeTop && srcObs) {
+      swipeTop.src = `/api/v1/observations/${srcObs.product_id}/preview`;
+    }
+    if (swipeBottom && job.artifacts?.warped_url) {
+      swipeBottom.src = `${job.artifacts.warped_url}?t=${Date.now()}`;
+    }
+
+    setSwipePosition(50);
+  }
+}
+
+// Swipe Comparator Slider Positioning
+function setSwipePosition(percent) {
+  const clamped = Math.max(0, Math.min(100, percent));
+  poc3State.swipePercent = clamped;
+
+  const overlay = document.getElementById('swipe-overlay');
+  const handle = document.getElementById('swipe-handle');
+  if (overlay) overlay.style.width = `${clamped}%`;
+  if (handle) handle.style.left = `${clamped}%`;
+}
+
+// Viewport Zoom & Pan Helpers
+function poc3ApplyTransform() {
+  const img = document.getElementById('reg-artifact-img');
+  const badge = document.getElementById('reg-zoom-badge');
+  if (img) {
+    img.style.transform = `translate(${poc3State.panX}px, ${poc3State.panY}px) scale(${poc3State.zoom})`;
+  }
+  if (badge) {
+    badge.textContent = `${Math.round(poc3State.zoom * 100)}%`;
+  }
+}
+
+function poc3ResetZoom() {
+  poc3State.zoom = 1.0;
+  poc3State.panX = 0;
+  poc3State.panY = 0;
+  poc3ApplyTransform();
+}
+
+function poc3Zoom(delta) {
+  poc3State.zoom = Math.max(0.2, Math.min(5.0, poc3State.zoom + delta));
+  poc3ApplyTransform();
+}
+
+// Initialize POC 3 Event Listeners and Interactive Bindings
+function initPOC3() {
+  // Source & Reference Selection Change Listeners
+  const selSrc = document.getElementById('reg-select-source');
+  const selRef = document.getElementById('reg-select-reference');
+  selSrc?.addEventListener('change', (e) => {
+    poc3State.selectedSourceId = e.target.value;
+    updateRegistrationPairDisplay();
+  });
+  selRef?.addEventListener('change', (e) => {
+    poc3State.selectedRefId = e.target.value;
+    updateRegistrationPairDisplay();
+  });
+
+  // Top Navigation Buttons
+  document.getElementById('btn-nav-layer1')?.addEventListener('click', () => switchModule('layer1'));
+  document.getElementById('btn-nav-poc3')?.addEventListener('click', () => switchModule('poc3'));
+
+  // Inspector Quick Launch Button
+  document.getElementById('btn-inspect-register-poc3')?.addEventListener('click', () => {
+    if (state.selectedObservation) {
+      switchModule('poc3');
+      poc3SetSelectedPair(state.selectedObservation.product_id, null);
+    }
+  });
+
+  // Benchmark Preset Buttons
+  const loadPreset = () => {
+    poc3SetDefaultBoguslawskyPair();
+  };
+  document.getElementById('btn-load-boguslawsky-pair')?.addEventListener('click', loadPreset);
+  document.getElementById('btn-preset-boguslawsky')?.addEventListener('click', loadPreset);
+  document.getElementById('btn-empty-quickrun')?.addEventListener('click', () => {
+    loadPreset();
+    executeRegistration();
+  });
+
+  // Algorithm Pills
+  const algoPills = document.querySelectorAll('#reg-algo-pills .algo-pill');
+  algoPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      algoPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      const method = pill.dataset.method;
+      poc3State.selectedMethod = method;
+
+      const doc = ALGORITHM_DOCS[method];
+      if (doc) {
+        const titleEl = document.getElementById('algo-info-name');
+        const descEl = document.getElementById('algo-info-desc');
+        if (titleEl) titleEl.textContent = doc.name;
+        if (descEl) descEl.textContent = doc.desc;
+      }
+    });
+  });
+
+  // Transformation Model Pills
+  const transPills = document.querySelectorAll('#reg-transform-pills .toggle-pill');
+  transPills.forEach(pill => {
+    pill.addEventListener('click', () => {
+      transPills.forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      poc3State.selectedTransform = pill.dataset.transform;
+    });
+  });
+
+  // Slider Ratio Thresh
+  const sliderRatio = document.getElementById('slider-ratio-thresh');
+  const valRatio = document.getElementById('val-ratio-thresh');
+  sliderRatio?.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    poc3State.ratioThresh = val;
+    if (valRatio) valRatio.textContent = val.toFixed(2);
+  });
+
+  // Slider RANSAC Thresh
+  const sliderRansac = document.getElementById('slider-ransac-thresh');
+  const valRansac = document.getElementById('val-ransac-thresh');
+  sliderRansac?.addEventListener('input', (e) => {
+    const val = parseFloat(e.target.value);
+    poc3State.ransacThresh = val;
+    if (valRansac) valRansac.textContent = `${val.toFixed(1)} px`;
+  });
+
+  // Execute Registration Button
+  document.getElementById('btn-execute-reg')?.addEventListener('click', executeRegistration);
+
+  // Stage View Tabs
+  const stageTabs = document.querySelectorAll('#reg-view-tabs .stage-tab');
+  stageTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      stageTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      poc3State.activeViewTab = tab.dataset.view;
+      updateStageView();
+    });
+  });
+
+  // Viewport Zoom & HUD Controls
+  document.getElementById('btn-reg-zoom-in')?.addEventListener('click', () => poc3Zoom(0.25));
+  document.getElementById('btn-reg-zoom-out')?.addEventListener('click', () => poc3Zoom(-0.25));
+  document.getElementById('btn-reg-zoom-reset')?.addEventListener('click', poc3ResetZoom);
+  document.getElementById('btn-reg-zoom-fit')?.addEventListener('click', poc3ResetZoom);
+
+  // Canvas Pan & Drag Controls
+  const canvasWrapper = document.getElementById('reg-canvas-wrapper');
+  if (canvasWrapper) {
+    canvasWrapper.addEventListener('wheel', (e) => {
+      e.preventDefault();
+      const delta = e.deltaY < 0 ? 0.15 : -0.15;
+      poc3Zoom(delta);
+    }, { passive: false });
+
+    canvasWrapper.addEventListener('mousedown', (e) => {
+      poc3State.isDraggingCanvas = true;
+      poc3State.dragStartX = e.clientX - poc3State.panX;
+      poc3State.dragStartY = e.clientY - poc3State.panY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (poc3State.isDraggingCanvas) {
+        poc3State.panX = e.clientX - poc3State.dragStartX;
+        poc3State.panY = e.clientY - poc3State.dragStartY;
+        poc3ApplyTransform();
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      poc3State.isDraggingCanvas = false;
+    });
+  }
+
+  // Swipe Comparator Drag Handle
+  const swipeContainer = document.getElementById('swipe-container');
+  const swipeHandle = document.getElementById('swipe-handle');
+  if (swipeHandle && swipeContainer) {
+    const handleSwipeMove = (clientX) => {
+      const rect = swipeContainer.getBoundingClientRect();
+      const offsetX = clientX - rect.left;
+      const pct = (offsetX / rect.width) * 100;
+      setSwipePosition(pct);
+    };
+
+    swipeHandle.addEventListener('mousedown', (e) => {
+      poc3State.isSwiping = true;
+      e.preventDefault();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (poc3State.isSwiping) {
+        handleSwipeMove(e.clientX);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      poc3State.isSwiping = false;
+    });
+
+    // Touch events for mobile/tablet
+    swipeHandle.addEventListener('touchstart', (e) => {
+      poc3State.isSwiping = true;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+      if (poc3State.isSwiping && e.touches.length > 0) {
+        handleSwipeMove(e.touches[0].clientX);
+      }
+    }, { passive: true });
+
+    window.addEventListener('touchend', () => {
+      poc3State.isSwiping = false;
+    });
+  }
+
+  // Export Metrics as JSON
+  document.getElementById('btn-export-json')?.addEventListener('click', () => {
+    if (!poc3State.currentJob) {
+      alert("No active registration job to export.");
+      return;
+    }
+    const jsonStr = JSON.stringify(poc3State.currentJob, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `nexus_lunar_registration_${poc3State.currentJob.job_id}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+}
+
 // Start Application on Load
-document.addEventListener('DOMContentLoaded', initData);
+document.addEventListener('DOMContentLoaded', () => {
+  initData();
+  initPOC3();
+});
+

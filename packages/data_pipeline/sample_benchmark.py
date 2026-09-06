@@ -230,6 +230,199 @@ def create_sample_benchmark_suite(output_base: Union[str, Path] = "data") -> Lis
     )
     generated_obs.append(tmc_obs)
 
+    # 1b. Boguslawsky Pass 2 (CH2 OHRC repeat pass)
+    pass2_id = "ch2_ohr_ncp_20230916t062010_boguslawsky_pass2"
+    pass2_dir = raw_dir / "ohrc" / pass2_id
+    pass2_dir.mkdir(parents=True, exist_ok=True)
+    pass2_img = generate_synthetic_lunar_terrain_patch(dim=1024, num_craters=18, illumination_angle_deg=40.0, seed=102)
+    pass2_img_path = pass2_dir / f"{pass2_id}.png"
+    Image.fromarray(pass2_img).save(pass2_img_path)
+    pass2_obs = LunarObservation(
+        product_id=pass2_id,
+        mission=MissionType.CHANDRAYAAN2,
+        sensor=SensorType.OHRC,
+        acquisition_time=datetime(2023, 9, 16, 6, 20, 10),
+        spatial_resolution_m=0.25,
+        bbox=bbox,
+        geometry=ObservationGeometry(
+            solar_zenith_deg=60.0,
+            solar_azimuth_deg=40.0,
+            incidence_angle_deg=60.0,
+        ),
+        primary_image_path=str(pass2_img_path.resolve()),
+        preview_image_path=str(pass2_img_path.resolve()),
+    )
+    generated_obs.append(pass2_obs)
+
+    # 2. Shackleton Crater South Pole Rim
+    shack_reg = BENCHMARK_REGIONS.get("shackleton_south_pole", {})
+    shack_bbox = shack_reg.get("bbox", BoundingBox(min_lat=-89.9, max_lat=-88.5, min_lon=0.0, max_lon=180.0))
+    shack_ohrc_id = "ch2_ohr_ncp_20230823t123015_shackleton_rim"
+    shack_ohrc_dir = raw_dir / "ohrc" / shack_ohrc_id
+    shack_ohrc_dir.mkdir(parents=True, exist_ok=True)
+    shack_ohrc_img = generate_synthetic_lunar_terrain_patch(dim=1024, num_craters=14, illumination_angle_deg=82.0, seed=201)
+    shack_ohrc_path = shack_ohrc_dir / f"{shack_ohrc_id}.png"
+    Image.fromarray(shack_ohrc_img).save(shack_ohrc_path)
+    shack_ohrc_obs = LunarObservation(
+        product_id=shack_ohrc_id,
+        mission=MissionType.CHANDRAYAAN2,
+        sensor=SensorType.OHRC,
+        acquisition_time=datetime(2023, 8, 23, 12, 30, 15),
+        spatial_resolution_m=0.25,
+        bbox=shack_bbox,
+        geometry=ObservationGeometry(
+            solar_zenith_deg=82.0,
+            solar_azimuth_deg=110.0,
+            incidence_angle_deg=82.0,
+        ),
+        primary_image_path=str(shack_ohrc_path.resolve()),
+        preview_image_path=str(shack_ohrc_path.resolve()),
+    )
+    generated_obs.append(shack_ohrc_obs)
+
+    shack_tmc_id = "ch2_tmc_ncn_20230823t122800_shackleton_triplet"
+    shack_tmc_dir = raw_dir / "tmc2" / shack_tmc_id
+    shack_tmc_dir.mkdir(parents=True, exist_ok=True)
+    shack_tmc_img = generate_synthetic_lunar_terrain_patch(dim=512, num_craters=20, illumination_angle_deg=82.0, seed=202)
+    shack_tmc_path = shack_tmc_dir / f"{shack_tmc_id}.png"
+    Image.fromarray(shack_tmc_img).save(shack_tmc_path)
+    shack_tmc_obs = LunarObservation(
+        product_id=shack_tmc_id,
+        mission=MissionType.CHANDRAYAAN2,
+        sensor=SensorType.TMC2,
+        acquisition_time=datetime(2023, 8, 23, 12, 28, 0),
+        spatial_resolution_m=5.0,
+        bbox=shack_bbox,
+        geometry=ObservationGeometry(
+            solar_zenith_deg=82.0,
+            solar_azimuth_deg=110.0,
+            incidence_angle_deg=82.0,
+        ),
+        primary_image_path=str(shack_tmc_path.resolve()),
+        preview_image_path=str(shack_tmc_path.resolve()),
+    )
+    generated_obs.append(shack_tmc_obs)
+
+    shack_ref_id = "M1123456789_SHACKLETON_REF"
+    shack_ref_dir = raw_dir / "lro_nac" / shack_ref_id
+    shack_ref_dir.mkdir(parents=True, exist_ok=True)
+    shack_ref_img = generate_synthetic_lunar_terrain_patch(dim=1024, num_craters=14, illumination_angle_deg=78.0, seed=201)
+    shack_ref_path = shack_ref_dir / f"{shack_ref_id}.png"
+    Image.fromarray(shack_ref_img).save(shack_ref_path)
+    shack_ref_obs = LunarObservation(
+        product_id=shack_ref_id,
+        mission=MissionType.LRO,
+        sensor=SensorType.LRO_NAC,
+        acquisition_time=datetime(2021, 6, 14, 18, 10, 0),
+        spatial_resolution_m=0.50,
+        bbox=shack_bbox,
+        geometry=ObservationGeometry(
+            solar_zenith_deg=78.0,
+            solar_azimuth_deg=115.0,
+            incidence_angle_deg=78.0,
+        ),
+        primary_image_path=str(shack_ref_path.resolve()),
+        preview_image_path=str(shack_ref_path.resolve()),
+    )
+    generated_obs.append(shack_ref_obs)
+
+    # 3. Taurus-Littrow Valley (Apollo 17 Site)
+    ap_reg = BENCHMARK_REGIONS.get("taurus_littrow_apollo17", {})
+    ap_bbox = ap_reg.get("bbox", BoundingBox(min_lat=20.0, max_lat=20.5, min_lon=30.5, max_lon=31.0))
+    ap_ohrc_id = "ch2_ohr_ncp_20230712t081545_apollo17_site"
+    ap_ohrc_dir = raw_dir / "ohrc" / ap_ohrc_id
+    ap_ohrc_dir.mkdir(parents=True, exist_ok=True)
+    ap_ohrc_img = generate_synthetic_lunar_terrain_patch(dim=1024, num_craters=22, illumination_angle_deg=45.0, seed=301)
+    ap_ohrc_path = ap_ohrc_dir / f"{ap_ohrc_id}.png"
+    Image.fromarray(ap_ohrc_img).save(ap_ohrc_path)
+    ap_ohrc_obs = LunarObservation(
+        product_id=ap_ohrc_id,
+        mission=MissionType.CHANDRAYAAN2,
+        sensor=SensorType.OHRC,
+        acquisition_time=datetime(2023, 7, 12, 8, 15, 45),
+        spatial_resolution_m=0.32,
+        bbox=ap_bbox,
+        geometry=ObservationGeometry(
+            solar_zenith_deg=45.0,
+            solar_azimuth_deg=85.0,
+            incidence_angle_deg=45.0,
+        ),
+        primary_image_path=str(ap_ohrc_path.resolve()),
+        preview_image_path=str(ap_ohrc_path.resolve()),
+    )
+    generated_obs.append(ap_ohrc_obs)
+
+    ap_tmc_id = "ch2_tmc_ncn_20230712t081200_apollo17_context"
+    ap_tmc_dir = raw_dir / "tmc2" / ap_tmc_id
+    ap_tmc_dir.mkdir(parents=True, exist_ok=True)
+    ap_tmc_img = generate_synthetic_lunar_terrain_patch(dim=512, num_craters=30, illumination_angle_deg=45.0, seed=302)
+    ap_tmc_path = ap_tmc_dir / f"{ap_tmc_id}.png"
+    Image.fromarray(ap_tmc_img).save(ap_tmc_path)
+    ap_tmc_obs = LunarObservation(
+        product_id=ap_tmc_id,
+        mission=MissionType.CHANDRAYAAN2,
+        sensor=SensorType.TMC2,
+        acquisition_time=datetime(2023, 7, 12, 8, 12, 0),
+        spatial_resolution_m=5.0,
+        bbox=ap_bbox,
+        geometry=ObservationGeometry(
+            solar_zenith_deg=45.0,
+            solar_azimuth_deg=85.0,
+            incidence_angle_deg=45.0,
+        ),
+        primary_image_path=str(ap_tmc_path.resolve()),
+        preview_image_path=str(ap_tmc_path.resolve()),
+    )
+    generated_obs.append(ap_tmc_obs)
+
+    ap_ref_id = "M1198765432_APOLLO17_REF"
+    ap_ref_dir = raw_dir / "lro_nac" / ap_ref_id
+    ap_ref_dir.mkdir(parents=True, exist_ok=True)
+    ap_ref_img = generate_synthetic_lunar_terrain_patch(dim=1024, num_craters=22, illumination_angle_deg=50.0, seed=301)
+    ap_ref_path = ap_ref_dir / f"{ap_ref_id}.png"
+    Image.fromarray(ap_ref_img).save(ap_ref_path)
+    ap_ref_obs = LunarObservation(
+        product_id=ap_ref_id,
+        mission=MissionType.LRO,
+        sensor=SensorType.LRO_NAC,
+        acquisition_time=datetime(2019, 12, 5, 9, 30, 0),
+        spatial_resolution_m=0.50,
+        bbox=ap_bbox,
+        geometry=ObservationGeometry(
+            solar_zenith_deg=50.0,
+            solar_azimuth_deg=90.0,
+            incidence_angle_deg=50.0,
+        ),
+        primary_image_path=str(ap_ref_path.resolve()),
+        preview_image_path=str(ap_ref_path.resolve()),
+    )
+    generated_obs.append(ap_ref_obs)
+
+    # 4. Manzinus Highlands Site
+    manz_bbox = BoundingBox(min_lat=-68.5, max_lat=-66.5, min_lon=25.5, max_lon=28.5)
+    manz_ohrc_id = "ch2_ohr_ncp_20231005t141020_manzinus_crater"
+    manz_ohrc_dir = raw_dir / "ohrc" / manz_ohrc_id
+    manz_ohrc_dir.mkdir(parents=True, exist_ok=True)
+    manz_ohrc_img = generate_synthetic_lunar_terrain_patch(dim=1024, num_craters=20, illumination_angle_deg=55.0, seed=401)
+    manz_ohrc_path = manz_ohrc_dir / f"{manz_ohrc_id}.png"
+    Image.fromarray(manz_ohrc_img).save(manz_ohrc_path)
+    manz_ohrc_obs = LunarObservation(
+        product_id=manz_ohrc_id,
+        mission=MissionType.CHANDRAYAAN2,
+        sensor=SensorType.OHRC,
+        acquisition_time=datetime(2023, 10, 5, 14, 10, 20),
+        spatial_resolution_m=0.28,
+        bbox=manz_bbox,
+        geometry=ObservationGeometry(
+            solar_zenith_deg=55.0,
+            solar_azimuth_deg=45.0,
+            incidence_angle_deg=55.0,
+        ),
+        primary_image_path=str(manz_ohrc_path.resolve()),
+        preview_image_path=str(manz_ohrc_path.resolve()),
+    )
+    generated_obs.append(manz_ohrc_obs)
+
     # Add all to catalog
     catalog.add_observations(generated_obs)
     logger.info(f"Successfully generated and indexed {len(generated_obs)} benchmark observations into {catalog.catalog_file}")

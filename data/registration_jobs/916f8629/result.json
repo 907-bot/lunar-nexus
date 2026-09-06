@@ -1,0 +1,44 @@
+{
+  "job_id": "916f8629",
+  "status": "COMPLETED",
+  "source_id": "ch2_ohr_ncp_20230712t081545_apollo17_site",
+  "reference_id": "M1198765432_APOLLO17_REF",
+  "method": "ORB",
+  "transform_type": "Affine",
+  "metrics": {
+    "match_count": 2902,
+    "inlier_count": 2899,
+    "inlier_ratio_pct": 99.9,
+    "reprojection_rmse_px": 0.0851,
+    "runtime_ms": 134.92,
+    "confidence_level": "HIGH",
+    "estimated_rotation_deg": 0.0,
+    "estimated_scale": {
+      "sx": 1.0,
+      "sy": 1.0
+    },
+    "estimated_translation_px": {
+      "dx": -0.0,
+      "dy": -0.0
+    },
+    "is_registration_successful": true
+  },
+  "transformation_matrix": [
+    [
+      1.0000013638445666,
+      9.05265925783078e-07,
+      -0.0012344814523063093
+    ],
+    [
+      2.2390930503034134e-06,
+      0.9999993342919778,
+      -0.0004264683629531899
+    ]
+  ],
+  "artifacts": {
+    "warped_url": "/api/v1/registration/916f8629/warped",
+    "matches_url": "/api/v1/registration/916f8629/matches",
+    "checkerboard_url": "/api/v1/registration/916f8629/checkerboard"
+  },
+  "timestamp": "2026-09-06T03:20:37.997622+00:00"
+}
