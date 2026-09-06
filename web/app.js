@@ -74,9 +74,10 @@ function initMap() {
 
   // Basemap: USGS Lunar Reconnaissance Orbiter (LRO) WAC Global Mosaic (via USGS Astropedia / NASA JPL WMTS)
   // Fallback to NASA Moon imagery or OpenPlanetary tiles
-  const lunarTiles = L.tileLayer('https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm:moon_basemap_v0-1/all/{z}/{x}/{y}.png', {
-    maxZoom: 9,
-    attribution: 'NASA/GSFC/ASU/USGS/OpenPlanetary',
+  const lunarTiles = L.tileLayer('https://cartocdn-gusc.global.ssl.fastly.net/opmbuilder/api/v1/map/named/opm-moon-basemap-v0-1/all/{z}/{x}/{y}.png', {
+    maxNativeZoom: 9,
+    maxZoom: 14,
+    attribution: 'NASA / USGS / LRO WAC Global Morphologic Mosaic / OpenPlanetary',
     errorTileUrl: 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" style="background:%23050811"><text x="128" y="128" fill="%23223049" font-family="sans-serif" font-size="12" text-anchor="middle">Lunar Tile</text></svg>'
   });
   lunarTiles.addTo(state.map);
@@ -321,8 +322,13 @@ async function loadManifestForPair(pair) {
     const res = await fetch(`/api/manifest?pair_id=${encodeURIComponent(pairKey)}`);
     if (res.ok) {
       const manifest = await res.json();
-      state.activeManifest = manifest;
-      renderPatchesGrid(manifest);
+      if (manifest && manifest.total_patches > 0) {
+        state.activeManifest = manifest;
+        renderPatchesGrid(manifest);
+      } else {
+        state.activeManifest = null;
+        renderEmptyPatchesGrid(pair);
+      }
     } else {
       state.activeManifest = null;
       renderEmptyPatchesGrid(pair);

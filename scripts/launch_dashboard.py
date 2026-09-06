@@ -81,7 +81,12 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 except Exception as e:
                     self.send_error(500, f"Error reading manifest: {e}")
             else:
-                self.send_error(404, f"Manifest not found for {pair_id}")
+                self.send_json_response({
+                    "total_patches": 0,
+                    "patches": [],
+                    "not_extracted": True,
+                    "pair_id": pair_id,
+                })
             return
 
         # 4. Static Frontend Routing
@@ -123,11 +128,16 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
 
     def get_overlapping_pairs(self):
         catalog = LunarDataCatalog(catalog_file=DATA_DIR / "catalog.json")
-        return catalog.find_overlapping_pairs(
-            source_sensor=SensorType.OHRC,
-            reference_sensor=SensorType.LRO_NAC,
-            min_overlap_pct=5.0,
-        )
+        pairs = []
+        for src_sensor in [SensorType.OHRC, SensorType.TMC2]:
+            pairs.extend(
+                catalog.find_overlapping_pairs(
+                    source_sensor=src_sensor,
+                    reference_sensor=SensorType.LRO_NAC,
+                    min_overlap_pct=5.0,
+                )
+            )
+        return pairs
 
     def run_patch_extraction(self, payload):
         catalog = LunarDataCatalog(catalog_file=DATA_DIR / "catalog.json")
