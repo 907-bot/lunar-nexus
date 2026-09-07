@@ -109,16 +109,20 @@ class TwoTowerCorrespondenceModel(nn.Module):
         # Physical Metadata Conditioning
         self.meta_mlp = MetadataConditioningMLP(meta_dim=meta_dim, out_dim=meta_proj_dim)
         
-        # Joint Projection Heads
+        # Joint Projection Heads with Batch Normalization to prevent dimensional collapse
         self.source_head = nn.Sequential(
-            nn.Linear(embedding_dim + meta_proj_dim, embedding_dim),
+            nn.Linear(embedding_dim + meta_proj_dim, embedding_dim, bias=False),
+            nn.BatchNorm1d(embedding_dim),
             nn.LeakyReLU(0.1, inplace=True),
-            nn.Linear(embedding_dim, embedding_dim)
+            nn.Linear(embedding_dim, embedding_dim, bias=False),
+            nn.BatchNorm1d(embedding_dim)
         )
         self.reference_head = nn.Sequential(
-            nn.Linear(embedding_dim + meta_proj_dim, embedding_dim),
+            nn.Linear(embedding_dim + meta_proj_dim, embedding_dim, bias=False),
+            nn.BatchNorm1d(embedding_dim),
             nn.LeakyReLU(0.1, inplace=True),
-            nn.Linear(embedding_dim, embedding_dim)
+            nn.Linear(embedding_dim, embedding_dim, bias=False),
+            nn.BatchNorm1d(embedding_dim)
         )
 
     def encode_source(self, src_img: torch.Tensor, meta: torch.Tensor) -> torch.Tensor:
@@ -126,7 +130,11 @@ class TwoTowerCorrespondenceModel(nn.Module):
         vis_feat = self.source_tower(src_img)
         meta_feat = self.meta_mlp(meta)
         combined = torch.cat([vis_feat, meta_feat], dim=1)
-        emb = self.source_head(combined)
+        # Handle batch size 1 inference for BatchNorm
+        if combined.size(0) == 1 and not self.training:
+            emb = self.source_head[3](self.source_head[2](self.source_head[0](combined)))
+        else:
+            emb = self.source_head(combined)
         return F.normalize(emb, p=2, dim=-1)
 
     def encode_reference(self, ref_img: torch.Tensor, meta: torch.Tensor) -> torch.Tensor:
@@ -134,7 +142,11 @@ class TwoTowerCorrespondenceModel(nn.Module):
         vis_feat = self.reference_tower(ref_img)
         meta_feat = self.meta_mlp(meta)
         combined = torch.cat([vis_feat, meta_feat], dim=1)
-        emb = self.reference_head(combined)
+        # Handle batch size 1 inference for BatchNorm
+        if combined.size(0) == 1 and not self.training:
+            emb = self.reference_head[3](self.reference_head[2](self.reference_head[0](combined)))
+        else:
+            emb = self.reference_head(combined)
         return F.normalize(emb, p=2, dim=-1)
 
     def compute_similarity(self, src_emb: torch.Tensor, ref_emb: torch.Tensor) -> torch.Tensor:

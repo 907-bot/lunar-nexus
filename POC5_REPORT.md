@@ -1,7 +1,7 @@
 # POC 5: Multimodal AI Correspondence — Full Verification Report
 **Date:** 2026-09-07  
 **Mission:** NEXUS-LUNAR (Chandrayaan-2 OHRC / TMC-2 & NASA LROC NAC Cross-Sensor Alignment)  
-**Execution Runtime:** 46.42 seconds  
+**Execution Runtime:** 12.43 seconds  
 **Model Architecture:** Two-Tower Deep Vision + Observation Geometry Metric Network  
 
 ---
@@ -39,8 +39,8 @@ All patch pairs were ingested directly from genuine Chandrayaan-2 and NASA PDS4 
 - **Reference Sensor (Tower B):** NASA Lunar Reconnaissance Orbiter Camera (LROC NAC) calibrated mosaic at $1.00\text{ m/px}$.
 - **Positive Pair Criterion:** Overlapping ground footprint within $<0.15\text{ km}$ geographic radius.
 - **Hard Negative Mining Criterion:** Patches from non-overlapping terrain at $>1.50\text{ km}$ separation exhibiting similar crater distributions.
-- **Total Training Pairs:** 156 pairs.
-- **Total Evaluation Queries:** 26 queries across 26 reference footprints.
+- **Total Training Pairs:** 162 pairs.
+- **Total Evaluation Queries:** 27 queries across 27 reference footprints.
 
 ---
 
@@ -49,12 +49,12 @@ Performance was evaluated using 1-to-N nearest neighbor cosine similarity retrie
 
 | Metric | Target / Benchmark | POC-5 Learned Two-Tower Result | Classical SIFT/ORB Baseline |
 | :--- | :---: | :---: | :---: |
-| **Recall@1** | $\ge 70.0\%$ | **3.9%** | 25.0% |
-| **Recall@5** | $\ge 85.0\%$ | **19.2%** | 48.0% |
-| **Recall@10** | $\ge 90.0\%$ | **42.3%** | 62.0% |
-| **Mean Reciprocal Rank (MRR)** | $\ge 0.750$ | **0.149** | 0.380 |
-| **Latent Separation Margin ($\Delta$)** | $> 0.200$ | **0.004** | - |
-| **Best Training Epoch Loss** | $< 0.300$ | **0.0285** | N/A |
+| **Recall@1** | $\ge 70.0\%$ | **14.8%** | 25.0% |
+| **Recall@5** | $\ge 85.0\%$ | **40.7%** | 48.0% |
+| **Recall@10** | $\ge 90.0\%$ | **74.1%** | 62.0% |
+| **Mean Reciprocal Rank (MRR)** | $\ge 0.750$ | **0.286** | 0.380 |
+| **Latent Separation Margin ($\Delta$)** | $> 0.200$ | **0.019** | - |
+| **Best Training Epoch Loss** | $< 0.300$ | **0.3150** | N/A |
 
 ---
 

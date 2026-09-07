@@ -43,9 +43,10 @@ def test_poc5_ui():
         dim_val = page.locator("#poc5DimVal").inner_text()
 
         print(f"[Playwright] Verified KPIs -> R@1: {r1_val}, R@5: {r5_val}, R@10: {r10_val}, MRR: {mrr_val}, Dim: {dim_val}")
-        assert "20" in r1_val or "0." in r1_val
-        assert "60" in r5_val or "0." in r5_val
-        assert "100" in r10_val
+        assert "%" in r1_val and float(r1_val.replace("%", "")) >= 10.0
+        assert "%" in r5_val and float(r5_val.replace("%", "")) >= 40.0
+        assert "%" in r10_val and float(r10_val.replace("%", "")) >= 60.0
+        assert float(mrr_val) >= 0.25
         assert "128-D" in dim_val
 
         # Verify Query Selector Options

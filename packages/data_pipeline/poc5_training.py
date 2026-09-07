@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional, Tuple, Union
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
@@ -23,21 +24,34 @@ from .poc5_model import TwoTowerCorrespondenceModel
 
 
 class ContrastiveCosineLoss(nn.Module):
-    """Contrastive loss for L2-normalized embeddings:
-    For positive pairs (y=1): loss = 1 - cosine_similarity
-    For negative pairs (y=0): loss = max(0, cosine_similarity - margin)^2 * weight
+    """Normalized Temperature-scaled Cross-Entropy (InfoNCE) Contrastive Loss.
+    Maximizes mutual information between positive multimodal patch pairs while actively repelling 
+    distractor negatives across the batch, preventing embedding collapse to uniform vectors.
     """
-    def __init__(self, margin: float = 0.25, neg_weight: float = 1.5):
+    def __init__(self, temperature: float = 0.07, margin: float = 0.25):
         super().__init__()
+        self.temperature = temperature
         self.margin = margin
-        self.neg_weight = neg_weight
 
-    def forward(self, similarity: torch.Tensor, label: torch.Tensor) -> torch.Tensor:
-        pos_loss = label * (1.0 - similarity)
-        # Violating negatives: push below margin
-        violating_neg = torch.clamp(similarity - self.margin, min=0.0)
-        neg_loss = (1.0 - label) * torch.pow(violating_neg, 2) * self.neg_weight
-        return torch.mean(pos_loss + neg_loss)
+    def forward(
+        self,
+        src_or_sim: torch.Tensor,
+        ref_or_label: torch.Tensor,
+        labels: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        # Case 1: Pairwise 1D cosine similarity and binary labels
+        if src_or_sim.ndim == 1:
+            pos_loss = ref_or_label * (1.0 - src_or_sim)
+            violating_neg = torch.clamp(src_or_sim - self.margin, min=0.0)
+            neg_loss = (1.0 - ref_or_label) * torch.pow(violating_neg, 2) * 2.0
+            return torch.mean(pos_loss + neg_loss)
+
+        # Case 2: 2D Embeddings (B, D) via InfoNCE
+        sim_matrix = torch.matmul(src_or_sim, ref_or_label.mT) / self.temperature
+        targets = torch.arange(src_or_sim.size(0), device=src_or_sim.device)
+        loss_src = F.cross_entropy(sim_matrix, targets)
+        loss_ref = F.cross_entropy(sim_matrix.T, targets)
+        return (loss_src + loss_ref) / 2.0
 
 
 class POC5TwoTowerTrainer:
@@ -80,26 +94,24 @@ class POC5TwoTowerTrainer:
             src = src.to(self.device)
             ref = ref.to(self.device)
             meta = meta.to(self.device)
-            label = label.to(self.device)
 
             self.optimizer.zero_grad()
-            _, _, sim = self.model(src, ref, meta)
-            loss = self.criterion(sim, label)
+            src_emb, ref_emb, sim = self.model(src, ref, meta)
+            loss = self.criterion(src_emb, ref_emb)
             loss.backward()
             self.optimizer.step()
 
             total_loss += loss.item() * src.size(0)
 
-            # Record similarity separation statistics
-            sim_np = sim.detach().cpu().numpy()
-            lbl_np = label.detach().cpu().numpy()
-            pos_mask = lbl_np > 0.5
-            neg_mask = lbl_np <= 0.5
-
-            if np.any(pos_mask):
-                pos_sims.extend(sim_np[pos_mask].tolist())
-            if np.any(neg_mask):
-                neg_sims.extend(sim_np[neg_mask].tolist())
+            # Record similarity separation statistics from full batch matrix
+            with torch.no_grad():
+                sim_mat = torch.matmul(src_emb, ref_emb.T).cpu().numpy()
+                diag = np.diag(sim_mat)
+                pos_sims.extend(diag.tolist())
+                # Off-diagonal are true negatives
+                if sim_mat.shape[0] > 1:
+                    mask = ~np.eye(sim_mat.shape[0], dtype=bool)
+                    neg_sims.extend(sim_mat[mask].tolist())
 
         n_samples = len(dataloader.dataset)
         avg_loss = total_loss / max(1, n_samples)
@@ -117,14 +129,14 @@ class POC5TwoTowerTrainer:
     def fit(
         self,
         dataset: LunarCorrespondenceDataset,
-        epochs: int = 15,
-        batch_size: int = 8,
+        epochs: int = 25,
+        batch_size: int = 16,
         output_dir: Optional[Union[str, Path]] = None,
     ) -> Dict[str, Any]:
-        """Trains the Two-Tower model on real positive and negative pairs."""
-        all_pairs = dataset.positive_pairs + dataset.negative_pairs
-        py_dataset = PyTorchLunarPairDataset(all_pairs)
-        dataloader = DataLoader(py_dataset, batch_size=batch_size, shuffle=True)
+        """Trains the Two-Tower model on real positive pairs using InfoNCE in-batch negative mining."""
+        # For InfoNCE, each item in batch is a positive pair; other items act as hard online negatives
+        py_dataset = PyTorchLunarPairDataset(dataset.positive_pairs, augment=True)
+        dataloader = DataLoader(py_dataset, batch_size=batch_size, shuffle=True, drop_last=False)
 
         start_time = time.perf_counter()
         for ep in range(1, epochs + 1):
