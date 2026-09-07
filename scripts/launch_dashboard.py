@@ -141,6 +141,11 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                         "ablation_results": "/outputs/poc4/ablation_results.png",
                     }
                 }
+                self.send_json_response(resp)
+            else:
+                self.send_error(404, "POC 4 metadata not found")
+            return
+
         # 3d. API: POC 5 Results & Visualizations
         if path == "/api/poc5/results" or path == "/api/poc5/demo":
             results_path = PROJECT_ROOT / "outputs" / "poc5" / "results.json"
@@ -161,6 +166,51 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 self.send_json_response(resp)
             else:
                 self.send_error(404, "POC 5 results not found. Run scripts/demo_poc5.py")
+            return
+
+        # 3e. API: Blender MCP Server Status
+        if path == "/api/nexus/blender/status":
+            from packages.nexus_core.blender_mcp_client import BlenderMCPClient
+            client = BlenderMCPClient(project_root=PROJECT_ROOT)
+            online = client.is_server_online(timeout=0.3)
+            bin_path = client.get_blender_binary()
+            self.send_json_response({
+                "online": online,
+                "host": client.host,
+                "port": client.port,
+                "blender_bin": bin_path,
+                "blender_available": bin_path is not None,
+                "rendered_image_exists": (PROJECT_ROOT / "outputs" / "nexus_3d" / "nexus_blender_digital_twin.png").exists(),
+                "rendered_image_url": "/outputs/nexus_3d/nexus_blender_digital_twin.png",
+            })
+            return
+
+        # 3f. API: Habitat Layout Plan (POC 8)
+        if path == "/api/nexus/habitat/plan":
+            plan_path = PROJECT_ROOT / "outputs" / "nexus_3d" / "habitat_layout_plan.json"
+            if not plan_path.exists():
+                from packages.nexus_core.poc8_habitat_planner import HabitatConstraintPlanner
+                planner = HabitatConstraintPlanner()
+                planner.generate_habitat_layout()
+            if plan_path.exists():
+                with open(plan_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "Habitat layout plan not available")
+            return
+
+        # 3g. API: All 8 POCs Summary
+        if path == "/api/nexus/summary":
+            sum_path = PROJECT_ROOT / "outputs" / "nexus_summary.json"
+            if sum_path.exists():
+                with open(sum_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_json_response({
+                    "status": "ready",
+                    "pocs": ["poc1_skg", "poc2_terrain", "poc3_illumination", "poc4_resource", "poc5_xai", "poc6_gnn", "poc7_snn", "poc8_habitat"],
+                    "blender_mcp_port": 9876,
+                })
             return
 
 
@@ -222,6 +272,22 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
             except Exception as e:
                 logger.error(f"POC-5 execution error: {e}", exc_info=True)
                 self.send_error(500, f"POC-5 run failed: {str(e)}")
+            return
+
+        if path == "/api/nexus/blender/build":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else "{}"
+            try:
+                payload = json.loads(body) if body else {}
+                force_headless = bool(payload.get("force_headless", False))
+                from packages.nexus_core.blender_mcp_client import BlenderMCPClient
+                client = BlenderMCPClient(project_root=PROJECT_ROOT)
+                logger.info(f"Triggering Blender 3D Infrastructure build (force_headless={force_headless})...")
+                res = client.build_infrastructure_pipeline(force_headless=force_headless)
+                self.send_json_response(res)
+            except Exception as e:
+                logger.error(f"Blender build execution error: {e}", exc_info=True)
+                self.send_error(500, f"Blender build failed: {str(e)}")
             return
 
         self.send_error(404, "Endpoint not found")

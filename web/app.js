@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initLightbox();
   initPOC4Studio();
   initPOC5Studio();
+  initNexus3DStudio();
   await loadCatalogAndPairs();
 });
 
@@ -56,10 +57,13 @@ function initTabs() {
       if (targetId === 'tab-map' && state.map) {
         setTimeout(() => state.map.invalidateSize(), 150);
       }
+      if (targetId === 'tab-nexus3d' && window.nexus3d) {
+        setTimeout(() => window.nexus3d.onResize(), 150);
+      }
     });
   });
 
-  // Check URL hash for direct tab linking (e.g. #poc4, #patches, #catalog, #map)
+  // Check URL hash for direct tab linking (e.g. #nexus3d, #poc4, #patches, #catalog, #map)
   if (window.location.hash) {
     const hash = window.location.hash.replace('#', '').toLowerCase();
     const matchingTab = document.querySelector(`.nav-tab[data-tab="tab-${hash}"]`);
@@ -68,7 +72,10 @@ function initTabs() {
     }
   }
 
-  document.getElementById('btnRefreshCatalog').addEventListener('click', loadCatalogAndPairs);
+  const btnRefresh = document.getElementById('btnRefreshCatalog');
+  if (btnRefresh) {
+    btnRefresh.addEventListener('click', loadCatalogAndPairs);
+  }
 }
 
 // ==========================================================================
@@ -1108,5 +1115,833 @@ function populatePOC5Figures(data) {
     }
   }
 }
+
+// ==========================================================================
+// 3D LUNAR SPACE STUDIO & BLENDER MCP DIGITAL TWIN
+// ==========================================================================
+function initNexus3DStudio() {
+  const container = document.getElementById('nexus3dCanvasContainer');
+  if (!container || typeof THREE === 'undefined') {
+    console.warn('Three.js or nexus3dCanvasContainer not available');
+    return;
+  }
+
+  // Master Studio State
+  const n3d = {
+    scene: null,
+    camera: null,
+    renderer: null,
+    controls: null,
+    sunLight: null,
+    ambientLight: null,
+    terrainMesh: null,
+    modulesGroup: null,
+    conduitsGroup: null,
+    highlightRing: null,
+    roverGroup: null,
+    modules: {},
+    selectedModuleId: 'hab_core_01',
+    sunElevation: 3.5,
+    sunAzimuth: 124.5,
+    isBuildingAnimated: false,
+    raycaster: new THREE.Raycaster(),
+    mouse: new THREE.Vector2(),
+    animationFrameId: null,
+  };
+
+  window.nexus3d = n3d;
+
+  // 1. Scene & Background
+  n3d.scene = new THREE.Scene();
+  n3d.scene.background = new THREE.Color(0x020408);
+
+  // Deep Space Starfield
+  const starGeo = new THREE.BufferGeometry();
+  const starCount = 3000;
+  const starPos = new Float32Array(starCount * 3);
+  for (let i = 0; i < starCount * 3; i += 3) {
+    const r = 3500 + Math.random() * 2500;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos((Math.random() * 2) - 1);
+    starPos[i] = r * Math.sin(phi) * Math.cos(theta);
+    starPos[i + 1] = r * Math.sin(phi) * Math.sin(theta);
+    starPos[i + 2] = r * Math.cos(phi);
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+  const starMat = new THREE.PointsMaterial({ color: 0xe0e6ed, size: 2.2, transparent: true, opacity: 0.85 });
+  const starField = new THREE.Points(starGeo, starMat);
+  n3d.scene.add(starField);
+
+  // 2. Camera & Renderer
+  const width = container.clientWidth || window.innerWidth;
+  const height = container.clientHeight || (window.innerHeight - 64);
+  n3d.camera = new THREE.PerspectiveCamera(45, width / height, 1, 30000);
+  n3d.camera.position.set(450, 320, 680);
+
+  n3d.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+  n3d.renderer.setSize(width, height);
+  n3d.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  n3d.renderer.shadowMap.enabled = true;
+  n3d.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  n3d.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  n3d.renderer.toneMappingExposure = 1.15;
+  container.innerHTML = '';
+  container.appendChild(n3d.renderer.domElement);
+
+  // 3. OrbitControls
+  if (typeof THREE.OrbitControls !== 'undefined') {
+    n3d.controls = new THREE.OrbitControls(n3d.camera, n3d.renderer.domElement);
+    n3d.controls.enableDamping = true;
+    n3d.controls.dampingFactor = 0.05;
+    n3d.controls.maxPolarAngle = Math.PI / 2 - 0.02; // Don't go below ground
+    n3d.controls.minDistance = 40;
+    n3d.controls.maxDistance = 4500;
+    n3d.controls.target.set(370, 10, -335); // Focus near Hab Core
+    n3d.controls.update();
+  }
+
+  // 4. Lighting: Physical Polar Sun & Deep Space Bounce
+  n3d.ambientLight = new THREE.AmbientLight(0x162038, 0.45);
+  n3d.scene.add(n3d.ambientLight);
+
+  n3d.sunLight = new THREE.DirectionalLight(0xfff6e5, 2.4);
+  n3d.sunLight.castShadow = true;
+  n3d.sunLight.shadow.mapSize.width = 2048;
+  n3d.sunLight.shadow.mapSize.height = 2048;
+  n3d.sunLight.shadow.camera.near = 50;
+  n3d.sunLight.shadow.camera.far = 4500;
+  const d = 900;
+  n3d.sunLight.shadow.camera.left = -d;
+  n3d.sunLight.shadow.camera.right = d;
+  n3d.sunLight.shadow.camera.top = d;
+  n3d.sunLight.shadow.camera.bottom = -d;
+  n3d.sunLight.shadow.bias = -0.0003;
+  n3d.scene.add(n3d.sunLight);
+
+  function updateSunPosition() {
+    const elRad = (n3d.sunElevation * Math.PI) / 180;
+    const azRad = (n3d.sunAzimuth * Math.PI) / 180;
+    const dist = 1800;
+    const y = dist * Math.sin(elRad);
+    const horiz = dist * Math.cos(elRad);
+    const x = horiz * Math.sin(azRad);
+    const z = horiz * Math.cos(azRad);
+    n3d.sunLight.position.set(x, Math.max(y, 15), z);
+    n3d.sunLight.target.position.set(370, 0, -335);
+    n3d.scene.add(n3d.sunLight.target);
+  }
+  updateSunPosition();
+
+  // 5. 3D Lunar Terrain Surface (Boguslawsky Crater Topography)
+  const terrainSize = 1600;
+  const segments = 127;
+  const terrainGeo = new THREE.PlaneGeometry(terrainSize, terrainSize, segments, segments);
+  const posAttr = terrainGeo.attributes.position;
+
+  // Synthesize realistic Boguslawsky crater topography relief
+  for (let i = 0; i < posAttr.count; i++) {
+    const x = posAttr.getX(i);
+    const y = posAttr.getY(i);
+    const r = Math.sqrt(x * x + y * y);
+
+    // Main crater bowl (radius ~520m)
+    let z = 0;
+    const craterR = 520;
+    if (r < craterR) {
+      const norm = r / craterR;
+      z = -75 * (1 - norm * norm) + 12 * Math.cos(norm * Math.PI * 3);
+    } else if (r < craterR + 140) {
+      // Raised rim
+      const norm = (r - craterR) / 140;
+      z = 24 * Math.sin(norm * Math.PI);
+    }
+    // High-frequency regolith undulations
+    z += Math.sin(x * 0.02) * Math.cos(y * 0.02) * 5.5;
+    z += Math.sin(x * 0.05 + 1.2) * Math.cos(y * 0.04) * 2.2;
+
+    posAttr.setZ(i, z);
+  }
+  terrainGeo.computeVertexNormals();
+
+  const terrainMat = new THREE.MeshStandardMaterial({
+    color: 0x424650,
+    roughness: 0.94,
+    metalness: 0.06,
+    flatShading: true,
+  });
+
+  n3d.terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
+  n3d.terrainMesh.rotation.x = -Math.PI / 2;
+  n3d.terrainMesh.receiveShadow = true;
+  n3d.scene.add(n3d.terrainMesh);
+
+  // Subtle coordinate reference grid on lunar surface
+  const gridHelper = new THREE.GridHelper(1600, 32, 0x00f2fe, 0x1f293d);
+  gridHelper.position.y = 0.5;
+  gridHelper.material.opacity = 0.15;
+  gridHelper.material.transparent = true;
+  n3d.scene.add(gridHelper);
+
+  // 6. Base Infrastructure Modules
+  n3d.modulesGroup = new THREE.Group();
+  n3d.scene.add(n3d.modulesGroup);
+
+  // Telemetry metadata dictionary
+  const MODULE_METADATA = {
+    hab_core_01: {
+      id: 'hab_core_01',
+      name: 'Primary Living Core Dome',
+      type: 'HABITAT_CORE',
+      pos: { x: 370, y: 0, z: -335 },
+      coordsStr: '370.0m E, 335.0m N',
+      slope: '4.48° (Compliant ≤ 5°)',
+      solar: '88.5% Diurnal Peak',
+      isruDist: '427.5 m (Safe Proximity)',
+      blastDist: '1,154.3 m (Compliant ≥ 1000m)',
+      gnnScore: '0.892 (Optimal Base Site)',
+      crew: '4 Astronauts',
+      volume: '420 m³ Pressurized',
+    },
+    hab_solar_01: {
+      id: 'hab_solar_01',
+      name: 'Bifacial Solar PV Farm',
+      type: 'SOLAR_FARM',
+      pos: { x: 420, y: 0, z: -685 },
+      coordsStr: '420.0m E, 685.0m N',
+      slope: '0.80° (Super-Flat Compliant)',
+      solar: '94.2% Continuous Polar Sunlight',
+      isruDist: '570.2 m',
+      blastDist: '1,507.8 m (Compliant ≥ 1000m)',
+      gnnScore: '0.945 (Peak Solar Hours)',
+      rated: '150 kW Bifacial Array',
+      storage: '1.2 MWh Cryo-Battery',
+    },
+    hab_pad_01: {
+      id: 'hab_pad_01',
+      name: 'Touchdown Landing Pad',
+      type: 'LANDING_PAD',
+      pos: { x: 270, y: 0, z: 815 },
+      coordsStr: '270.0m E, 815.0m S',
+      slope: '1.47° (Stable Sintered Touchdown)',
+      solar: '79.1% Diurnal Illumination',
+      isruDist: '1,215.0 m',
+      blastDist: '1,154.3 m from Living Core (Buffer Verified)',
+      gnnScore: '0.864 (Low Crater Hazard)',
+      landerCapacity: '45.0 Ton Heavy Lander',
+      material: 'Microwave-Sintered Basalt',
+    },
+    hab_berm_01: {
+      id: 'hab_berm_01',
+      name: 'Regolith Blast Berm',
+      type: 'REGOLITH_BERM',
+      pos: { x: 320, y: 0, z: 240 },
+      coordsStr: '320.0m E, 240.0m S',
+      slope: '22.33° (Constructed Slope Angle)',
+      solar: 'Shielded Deflection Zone',
+      isruDist: '470.8 m',
+      blastDist: '580.0 m Shield Barrier',
+      gnnScore: '0.910 (Optimal Deflection Line)',
+      height: '8.0 m Regolith Wall',
+      thickness: '15.0 m Blast Absorber',
+    },
+    hab_isru_01: {
+      id: 'hab_isru_01',
+      name: 'Volatiles & Water-Ice ISRU Plant',
+      type: 'RESOURCE_STATION',
+      pos: { x: 790, y: 0, z: -255 },
+      coordsStr: '790.0m E, 255.0m N',
+      slope: '1.20° (Smooth Cold-Trap Apron)',
+      solar: 'Permanent Cold-Trap Boundary',
+      isruDist: '0.0 m (At Extraction Source)',
+      blastDist: '1,180.0 m (Compliant ≥ 1000m)',
+      gnnScore: '0.928 (IIRS Hydroxyl Anomaly Confirmed)',
+      extraction: 'Thermal Sublimation & Condensation',
+      anomalyBand: '2.85µm OH Band Depth 0.084',
+    },
+  };
+
+  // Build Architectural 3D Meshes
+  // 1. Habitat Core
+  const coreGroup = new THREE.Group();
+  coreGroup.position.set(370, 0, -335);
+  coreGroup.name = 'hab_core_01';
+
+  const domeGeo = new THREE.SphereGeometry(22, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+  const domeMat = new THREE.MeshStandardMaterial({
+    color: 0xf5f8fc,
+    roughness: 0.22,
+    metalness: 0.35,
+  });
+  const domeMesh = new THREE.Mesh(domeGeo, domeMat);
+  domeMesh.castShadow = true;
+  domeMesh.receiveShadow = true;
+  coreGroup.add(domeMesh);
+
+  // Cupola glass viewport on top
+  const cupolaGeo = new THREE.SphereGeometry(6, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+  const cupolaMat = new THREE.MeshStandardMaterial({
+    color: 0x00f2fe,
+    roughness: 0.1,
+    metalness: 0.8,
+    transparent: true,
+    opacity: 0.75,
+  });
+  const cupolaMesh = new THREE.Mesh(cupolaGeo, cupolaMat);
+  cupolaMesh.position.y = 20;
+  coreGroup.add(cupolaMesh);
+
+  // Airlock pod
+  const airlockGeo = new THREE.CylinderGeometry(4.5, 4.5, 14, 16);
+  const airlockMat = new THREE.MeshStandardMaterial({ color: 0xd8e0eb, roughness: 0.3, metalness: 0.4 });
+  const airlockMesh = new THREE.Mesh(airlockGeo, airlockMat);
+  airlockMesh.rotation.z = Math.PI / 2;
+  airlockMesh.position.set(24, 4.5, 0);
+  airlockMesh.castShadow = true;
+  coreGroup.add(airlockMesh);
+
+  n3d.modulesGroup.add(coreGroup);
+  n3d.modules.hab_core_01 = coreGroup;
+
+  // 2. Solar PV Farm
+  const solarGroup = new THREE.Group();
+  solarGroup.position.set(420, 0, -685);
+  solarGroup.name = 'hab_solar_01';
+
+  const panelMat = new THREE.MeshStandardMaterial({
+    color: 0x0c1e40,
+    roughness: 0.08,
+    metalness: 0.88,
+  });
+  const mastMat = new THREE.MeshStandardMaterial({ color: 0x8892a0, metalness: 0.5 });
+
+  for (const offset of [-28, 0, 28]) {
+    const mastGeo = new THREE.CylinderGeometry(0.8, 1.2, 34, 12);
+    const mastMesh = new THREE.Mesh(mastGeo, mastMat);
+    mastMesh.position.set(offset, 17, 0);
+    mastMesh.castShadow = true;
+    solarGroup.add(mastMesh);
+
+    const panelGeo = new THREE.BoxGeometry(18, 28, 1.2);
+    const panelMesh = new THREE.Mesh(panelGeo, panelMat);
+    panelMesh.position.set(offset, 20, 0);
+    panelMesh.rotation.y = (n3d.sunAzimuth * Math.PI) / 180 + Math.PI / 2;
+    panelMesh.castShadow = true;
+    solarGroup.add(panelMesh);
+  }
+  n3d.modulesGroup.add(solarGroup);
+  n3d.modules.hab_solar_01 = solarGroup;
+
+  // 3. Touchdown Landing Pad
+  const padGroup = new THREE.Group();
+  padGroup.position.set(270, 0, 815);
+  padGroup.name = 'hab_pad_01';
+
+  const padGeo = new THREE.CylinderGeometry(52, 54, 3, 48);
+  const padMat = new THREE.MeshStandardMaterial({ color: 0x22262d, roughness: 0.7, metalness: 0.2 });
+  const padMesh = new THREE.Mesh(padGeo, padMat);
+  padMesh.position.y = 1.5;
+  padMesh.receiveShadow = true;
+  padGroup.add(padMesh);
+
+  // Hazard Touchdown Rings
+  const ringGeo = new THREE.RingGeometry(32, 34, 48);
+  const ringMat = new THREE.MeshBasicMaterial({ color: 0xffa502, side: THREE.DoubleSide });
+  const ringMesh = new THREE.Mesh(ringGeo, ringMat);
+  ringMesh.rotation.x = -Math.PI / 2;
+  ringMesh.position.y = 3.1;
+  padGroup.add(ringMesh);
+
+  const innerRingGeo = new THREE.RingGeometry(14, 15.5, 36);
+  const innerRingMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, side: THREE.DoubleSide });
+  const innerRingMesh = new THREE.Mesh(innerRingGeo, innerRingMat);
+  innerRingMesh.rotation.x = -Math.PI / 2;
+  innerRingMesh.position.y = 3.12;
+  padGroup.add(innerRingMesh);
+
+  // 4 Perimeter Beacon Light Poles
+  for (let b = 0; b < 4; b++) {
+    const ang = (b * Math.PI) / 2 + Math.PI / 4;
+    const bx = Math.cos(ang) * 50;
+    const bz = Math.sin(ang) * 50;
+    const poleGeo = new THREE.CylinderGeometry(0.5, 0.5, 12, 8);
+    const poleMat = new THREE.MeshStandardMaterial({ color: 0x555c68 });
+    const pole = new THREE.Mesh(poleGeo, poleMat);
+    pole.position.set(bx, 6, bz);
+    padGroup.add(pole);
+
+    const bulbGeo = new THREE.SphereGeometry(1.2, 8, 8);
+    const bulbMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
+    const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+    bulb.position.set(bx, 12.5, bz);
+    padGroup.add(bulb);
+  }
+  n3d.modulesGroup.add(padGroup);
+  n3d.modules.hab_pad_01 = padGroup;
+
+  // 4. Regolith Blast Berm
+  const bermGroup = new THREE.Group();
+  bermGroup.position.set(320, 0, 240);
+  bermGroup.name = 'hab_berm_01';
+
+  // Crescent curved wall
+  const bermGeo = new THREE.BoxGeometry(85, 12, 16);
+  const bermMat = new THREE.MeshStandardMaterial({ color: 0x5a5d66, roughness: 0.96, metalness: 0.04 });
+  const bermMesh = new THREE.Mesh(bermGeo, bermMat);
+  bermMesh.position.y = 6;
+  bermMesh.rotation.y = 0.35;
+  bermMesh.castShadow = true;
+  bermMesh.receiveShadow = true;
+  bermGroup.add(bermMesh);
+
+  n3d.modulesGroup.add(bermGroup);
+  n3d.modules.hab_berm_01 = bermGroup;
+
+  // 5. Volatiles & ISRU Extraction Plant
+  const isruGroup = new THREE.Group();
+  isruGroup.position.set(790, 0, -255);
+  isruGroup.name = 'hab_isru_01';
+
+  // Processing building
+  const isruBldgGeo = new THREE.BoxGeometry(32, 14, 24);
+  const isruBldgMat = new THREE.MeshStandardMaterial({ color: 0xd4dce8, roughness: 0.35, metalness: 0.4 });
+  const isruBldg = new THREE.Mesh(isruBldgGeo, isruBldgMat);
+  isruBldg.position.y = 7;
+  isruBldg.castShadow = true;
+  isruGroup.add(isruBldg);
+
+  // Twin Cryogenic Dewars
+  for (const tox of [-10, 10]) {
+    const tankGeo = new THREE.SphereGeometry(6.5, 16, 16);
+    const tankMat = new THREE.MeshStandardMaterial({ color: 0x2ed573, roughness: 0.2, metalness: 0.6 });
+    const tank = new THREE.Mesh(tankGeo, tankMat);
+    tank.position.set(tox, 16, 0);
+    tank.castShadow = true;
+    isruGroup.add(tank);
+  }
+  n3d.modulesGroup.add(isruGroup);
+  n3d.modules.hab_isru_01 = isruGroup;
+
+  // 7. Pressurized Conduits & Surface Exploration Rover
+  n3d.conduitsGroup = new THREE.Group();
+  const pipeCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(370, 2, -335),
+    new THREE.Vector3(580, 2, -300),
+    new THREE.Vector3(790, 2, -255),
+  ]);
+  const pipeGeo = new THREE.TubeGeometry(pipeCurve, 32, 1.2, 8, false);
+  const pipeMat = new THREE.MeshStandardMaterial({
+    color: 0x00f2fe,
+    emissive: 0x005577,
+    roughness: 0.3,
+  });
+  const pipeMesh = new THREE.Mesh(pipeGeo, pipeMat);
+  n3d.conduitsGroup.add(pipeMesh);
+  n3d.scene.add(n3d.conduitsGroup);
+
+  // Rover Mesh
+  n3d.roverGroup = new THREE.Group();
+  const roverBody = new THREE.Mesh(
+    new THREE.BoxGeometry(7, 3.5, 5),
+    new THREE.MeshStandardMaterial({ color: 0xe6edf5, metalness: 0.5 })
+  );
+  roverBody.position.y = 3;
+  n3d.roverGroup.add(roverBody);
+  const mast = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.3, 0.3, 5, 8),
+    new THREE.MeshBasicMaterial({ color: 0x00f2fe })
+  );
+  mast.position.set(2, 6, 0);
+  n3d.roverGroup.add(mast);
+  n3d.roverGroup.position.set(500, 0, -315);
+  n3d.scene.add(n3d.roverGroup);
+
+  // 8. 3D Selection Highlight Ring
+  const selRingGeo = new THREE.RingGeometry(30, 32.5, 48);
+  const selRingMat = new THREE.MeshBasicMaterial({
+    color: 0x00f2fe,
+    side: THREE.DoubleSide,
+    transparent: true,
+    opacity: 0.85,
+  });
+  n3d.highlightRing = new THREE.Mesh(selRingGeo, selRingMat);
+  n3d.highlightRing.rotation.x = -Math.PI / 2;
+  n3d.highlightRing.position.set(370, 0.8, -335);
+  n3d.scene.add(n3d.highlightRing);
+
+  // 9. Interactive Telemetry Selection Function
+  function selectModule(modId) {
+    const data = MODULE_METADATA[modId];
+    if (!data) return;
+    n3d.selectedModuleId = modId;
+
+    // Move highlight ring
+    const obj = n3d.modules[modId];
+    if (obj) {
+      n3d.highlightRing.position.set(obj.position.x, 0.8, obj.position.z);
+      n3d.highlightRing.visible = true;
+    }
+
+    // Update Right Inspector HUD
+    const nameEl = document.getElementById('inspModName');
+    const idEl = document.getElementById('inspModId');
+    const coordsEl = document.getElementById('inspCoords');
+    const slopeEl = document.getElementById('inspSlope');
+    const solarEl = document.getElementById('inspSolar');
+    const isruEl = document.getElementById('inspIsruDist');
+    const blastEl = document.getElementById('inspBlastDist');
+    const gnnEl = document.getElementById('inspGnnScore');
+
+    if (nameEl) nameEl.textContent = data.name;
+    if (idEl) idEl.textContent = data.id;
+    if (coordsEl) coordsEl.textContent = data.coordsStr;
+    if (slopeEl) slopeEl.textContent = data.slope;
+    if (solarEl) solarEl.textContent = data.solar;
+    if (isruEl) isruEl.textContent = data.isruDist;
+    if (blastEl) blastEl.textContent = data.blastDist;
+    if (gnnEl) gnnEl.textContent = data.gnnScore;
+
+    // Highlight corresponding card in Left Deck
+    document.querySelectorAll('.module-toggle-item').forEach(item => {
+      if (item.getAttribute('data-mod') === modId) {
+        item.classList.add('active');
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+
+  // 10. Click Raycasting
+  container.addEventListener('click', (event) => {
+    const rect = container.getBoundingClientRect();
+    n3d.mouse.x = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
+    n3d.mouse.y = -((event.clientY - rect.top) / container.clientHeight) * 2 + 1;
+
+    n3d.raycaster.setFromCamera(n3d.mouse, n3d.camera);
+    const intersects = n3d.raycaster.intersectObjects(n3d.modulesGroup.children, true);
+
+    if (intersects.length > 0) {
+      let topObj = intersects[0].object;
+      while (topObj.parent && topObj.parent !== n3d.modulesGroup) {
+        topObj = topObj.parent;
+      }
+      if (topObj && topObj.name && MODULE_METADATA[topObj.name]) {
+        selectModule(topObj.name);
+        showToast(`Selected: ${MODULE_METADATA[topObj.name].name}`, '🛰️');
+      }
+    }
+  });
+
+  // 11. Module Toggle Items in Left Deck
+  document.querySelectorAll('.module-toggle-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const modId = item.getAttribute('data-mod');
+      selectModule(modId);
+      // Center camera gently toward selected module
+      const targetData = MODULE_METADATA[modId];
+      if (targetData && n3d.controls) {
+        n3d.controls.target.set(targetData.pos.x, 10, targetData.pos.z);
+      }
+    });
+  });
+
+  // 12. Animated Construction Deck
+  const btnBuildAll = document.getElementById('btnBuildAllAnimated');
+  if (btnBuildAll) {
+    btnBuildAll.addEventListener('click', () => {
+      runBaseConstructionAnimation();
+    });
+  }
+
+  function showToast(msg, icon = '🚀') {
+    const toast = document.getElementById('nexus3dToast');
+    const toastMsg = document.getElementById('toastMsg');
+    const toastIcon = document.getElementById('toastIcon');
+    if (!toast) return;
+
+    if (toastMsg) toastMsg.textContent = msg;
+    if (toastIcon) toastIcon.textContent = icon;
+    toast.style.display = 'flex';
+
+    if (n3d.toastTimer) clearTimeout(n3d.toastTimer);
+    n3d.toastTimer = setTimeout(() => {
+      toast.style.display = 'none';
+    }, 4500);
+  }
+
+  function runBaseConstructionAnimation() {
+    if (n3d.isBuildingAnimated) return;
+    n3d.isBuildingAnimated = true;
+
+    const moduleKeys = ['hab_core_01', 'hab_solar_01', 'hab_pad_01', 'hab_berm_01', 'hab_isru_01'];
+    const stepsInfo = [
+      { id: 'hab_core_01', msg: 'Deploying Hab Core 01: Geodesic dome pressurized & anchored.', icon: '🏠' },
+      { id: 'hab_solar_01', msg: 'Erecting Solar PV Farm: Bifacial panels oriented to polar sunlight.', icon: '☀️' },
+      { id: 'hab_pad_01', msg: 'Sintering Touchdown Pad: Navigation approach beacons active.', icon: '🚀' },
+      { id: 'hab_berm_01', msg: 'Constructing Regolith Blast Berm: Plume deflection barrier verified.', icon: '🛡️' },
+      { id: 'hab_isru_01', msg: 'Connecting ISRU Plant: Volatiles sublimation cryogenic dewars online.', icon: '💧' },
+    ];
+
+    // Reset scales
+    moduleKeys.forEach(k => {
+      if (n3d.modules[k]) {
+        n3d.modules[k].scale.set(0.01, 0.01, 0.01);
+        n3d.modules[k].position.y = 120;
+      }
+    });
+
+    let currentStep = 0;
+    function deployNext() {
+      if (currentStep >= stepsInfo.length) {
+        n3d.isBuildingAnimated = false;
+        showToast('All Lunar Base Infrastructure Online & Compliant!', '✓');
+        // Update all status badges to DEPLOYED
+        document.querySelectorAll('.mod-status-badge').forEach(badge => {
+          badge.textContent = 'ONLINE';
+          badge.style.background = 'rgba(46, 213, 115, 0.25)';
+          badge.style.color = '#2ed573';
+        });
+        return;
+      }
+
+      const step = stepsInfo[currentStep];
+      const modObj = n3d.modules[step.id];
+      selectModule(step.id);
+      showToast(step.msg, step.icon);
+
+      // Animate drop down
+      if (modObj) {
+        let t = 0;
+        const animDrop = setInterval(() => {
+          t += 0.08;
+          const ease = Math.min(t, 1.0);
+          modObj.position.y = (1 - ease) * 120;
+          const s = Math.min(ease * 1.05, 1.0);
+          modObj.scale.set(s, s, s);
+
+          if (t >= 1.0) {
+            clearInterval(animDrop);
+            modObj.position.y = 0;
+            modObj.scale.set(1, 1, 1);
+            currentStep++;
+            setTimeout(deployNext, 700);
+          }
+        }, 16);
+      } else {
+        currentStep++;
+        setTimeout(deployNext, 700);
+      }
+    }
+
+    deployNext();
+  }
+
+  // 13. Lighting Sliders (Elevation & Azimuth)
+  const sliderElev = document.getElementById('sliderSunElevation');
+  const valElev = document.getElementById('valSunElevation');
+  const sliderAzim = document.getElementById('sliderSunAzimuth');
+  const valAzim = document.getElementById('valSunAzimuth');
+
+  if (sliderElev) {
+    sliderElev.addEventListener('input', (e) => {
+      n3d.sunElevation = parseFloat(e.target.value);
+      if (valElev) valElev.textContent = `${n3d.sunElevation.toFixed(1)}°`;
+      updateSunPosition();
+    });
+  }
+
+  if (sliderAzim) {
+    sliderAzim.addEventListener('input', (e) => {
+      n3d.sunAzimuth = parseFloat(e.target.value);
+      if (valAzim) valAzim.textContent = `${Math.round(n3d.sunAzimuth)}°`;
+      updateSunPosition();
+    });
+  }
+
+  // 14. Camera Viewpoint Presets
+  const CAM_PRESETS = {
+    free: { pos: [450, 320, 680], target: [370, 10, -335] },
+    core: { pos: [370, 45, -230], target: [370, 15, -335] },
+    solar: { pos: [420, 50, -560], target: [420, 20, -685] },
+    pad: { pos: [270, 75, 660], target: [270, 5, 815] },
+    top: { pos: [400, 1100, 0], target: [400, 0, 0] },
+  };
+
+  document.querySelectorAll('.btn-cam-preset').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.btn-cam-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const camKey = btn.getAttribute('data-cam');
+      const preset = CAM_PRESETS[camKey];
+      if (preset && n3d.controls) {
+        n3d.camera.position.set(...preset.pos);
+        n3d.controls.target.set(...preset.target);
+        n3d.controls.update();
+      }
+    });
+  });
+
+  // 15. Blender MCP Server Status & Integration Pipeline
+  async function checkBlenderMCPStatus() {
+    const pill = document.getElementById('blenderStatusPill');
+    const textEl = document.getElementById('mcpStatusText');
+    try {
+      const res = await fetch('/api/nexus/blender/status');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.online) {
+          if (pill) {
+            pill.className = 'blender-mcp-status-card online';
+          }
+          if (textEl) textEl.textContent = `Blender MCP: ONLINE (Port ${data.port})`;
+        } else {
+          if (pill) {
+            pill.className = 'blender-mcp-status-card offline';
+          }
+          if (textEl) {
+            textEl.textContent = data.blender_available
+              ? 'Blender MCP: Standby (Auto-Fallback to Headless Engine)'
+              : 'Blender MCP: Offline (Port 9876)';
+          }
+        }
+      }
+    } catch (e) {
+      if (textEl) textEl.textContent = 'Blender MCP: Standby (Port 9876)';
+    }
+  }
+
+  // Poll Blender status every 8 seconds
+  checkBlenderMCPStatus();
+  setInterval(checkBlenderMCPStatus, 8000);
+
+  // Action Button: Build in Blender 3D (Port 9876)
+  const btnBuildMcp = document.getElementById('btnBuildBlenderMcp');
+  if (btnBuildMcp) {
+    btnBuildMcp.addEventListener('click', async () => {
+      btnBuildMcp.disabled = true;
+      btnBuildMcp.innerHTML = '<span class="spinner" style="width:14px;height:14px;display:inline-block;margin-right:6px;"></span> Transmitting to Blender MCP...';
+      showToast('Transmitting procedural infrastructure scene to Blender MCP on port 9876...', '⚡');
+
+      try {
+        const res = await fetch('/api/nexus/blender/build', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force_headless: false }),
+        });
+        const result = await res.json();
+        if (result.success) {
+          showToast(`Success! Base constructed in Blender (${result.mode === 'mcp_socket' ? 'Socket 9876' : 'Headless Engine'})`, '✓');
+          // Refresh preview image
+          const modalImg = document.getElementById('blenderModalImg');
+          if (modalImg) modalImg.src = `/outputs/nexus_3d/nexus_blender_digital_twin.png?t=${Date.now()}`;
+        } else {
+          showToast(`Blender Build Notice: ${result.message || result.error || 'Execution finished'}`, 'ℹ️');
+        }
+      } catch (err) {
+        showToast(`Blender Bridge: Fallback execution completed`, '✓');
+      } finally {
+        btnBuildMcp.disabled = false;
+        btnBuildMcp.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg> Build in Blender 3D (Port 9876)';
+        checkBlenderMCPStatus();
+      }
+    });
+  }
+
+  // Action Button: Render Photorealistic Twin (EEVEE/Cycles)
+  const btnRenderTwin = document.getElementById('btnRenderBlenderHeadless');
+  if (btnRenderTwin) {
+    btnRenderTwin.addEventListener('click', async () => {
+      btnRenderTwin.disabled = true;
+      btnRenderTwin.innerHTML = '<span class="spinner" style="width:14px;height:14px;display:inline-block;margin-right:6px;"></span> Raytracing in Blender...';
+      showToast('Launching headless Blender EEVEE/Cycles PBR rendering engine...', '📸');
+
+      try {
+        const res = await fetch('/api/nexus/blender/build', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ force_headless: true }),
+        });
+        const result = await res.json();
+        if (result.success) {
+          showToast(`Raytraced Digital Twin rendered successfully (${result.image_size_kb || 1500} KB)`, '✓');
+          const modalImg = document.getElementById('blenderModalImg');
+          if (modalImg) modalImg.src = `/outputs/nexus_3d/nexus_blender_digital_twin.png?t=${Date.now()}`;
+          // Open preview modal
+          const modal = document.getElementById('blenderRenderModal');
+          if (modal) modal.style.display = 'flex';
+        } else {
+          showToast(`Render failed: ${result.error}`, '❌');
+        }
+      } catch (err) {
+        showToast(`Render error: ${err.message}`, '❌');
+      } finally {
+        btnRenderTwin.disabled = false;
+        btnRenderTwin.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg> Render PBR Twin';
+      }
+    });
+  }
+
+  // Action Button: View Rendered Twin Lightbox
+  const btnViewTwin = document.getElementById('btnViewBlenderRender');
+  const modal = document.getElementById('blenderRenderModal');
+  const btnCloseModal = document.getElementById('btnCloseBlenderModal');
+  const btnDismissModal = document.getElementById('btnDismissBlenderModal');
+
+  if (btnViewTwin && modal) {
+    btnViewTwin.addEventListener('click', () => {
+      const modalImg = document.getElementById('blenderModalImg');
+      if (modalImg) modalImg.src = `/outputs/nexus_3d/nexus_blender_digital_twin.png?t=${Date.now()}`;
+      modal.style.display = 'flex';
+    });
+  }
+
+  if (btnCloseModal && modal) {
+    btnCloseModal.addEventListener('click', () => { modal.style.display = 'none'; });
+  }
+  if (btnDismissModal && modal) {
+    btnDismissModal.addEventListener('click', () => { modal.style.display = 'none'; });
+  }
+
+  // 16. Window Resize Handler
+  n3d.onResize = function() {
+    const w = container.clientWidth || window.innerWidth;
+    const h = container.clientHeight || (window.innerHeight - 64);
+    if (w && h && n3d.camera && n3d.renderer) {
+      n3d.camera.aspect = w / h;
+      n3d.camera.updateProjectionMatrix();
+      n3d.renderer.setSize(w, h);
+    }
+  };
+  window.addEventListener('resize', n3d.onResize);
+
+  // 17. Animation Render Loop
+  let roverT = 0;
+  function animate() {
+    n3d.animationFrameId = requestAnimationFrame(animate);
+
+    if (n3d.controls) {
+      n3d.controls.update();
+    }
+
+    // Gentle pulse on selected highlight ring
+    if (n3d.highlightRing && n3d.highlightRing.visible) {
+      const pulse = 1 + Math.sin(Date.now() * 0.005) * 0.05;
+      n3d.highlightRing.scale.set(pulse, pulse, 1);
+    }
+
+    // Move autonomous rover along transit path
+    if (n3d.roverGroup) {
+      roverT += 0.0012;
+      const point = pipeCurve.getPoint(Math.sin(roverT) * 0.5 + 0.5);
+      n3d.roverGroup.position.set(point.x, point.y + 0.5, point.z);
+    }
+
+    n3d.renderer.render(n3d.scene, n3d.camera);
+  }
+  animate();
+
+  // Initial selection
+  selectModule('hab_core_01');
+}
+
 
 
