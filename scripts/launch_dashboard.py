@@ -130,6 +130,49 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 self.send_error(404, "POC 4 demo artifacts not generated yet. Run scripts/demo_poc4.py")
             return
 
+        # 3d. API: POC 5 Results JSON
+        if path == "/api/poc5/results":
+            results_path = PROJECT_ROOT / "outputs" / "poc5" / "poc5_results.json"
+            if results_path.exists():
+                with open(results_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "POC 5 results not found. Run scripts/demo_poc5.py")
+            return
+
+        # 3e. API: POC 5 Demo & Figures
+        if path == "/api/poc5/demo":
+            results_path = PROJECT_ROOT / "outputs" / "poc5" / "poc5_results.json"
+            meta_path = PROJECT_ROOT / "outputs" / "poc5" / "poc5_metadata.json"
+            if results_path.exists() and meta_path.exists():
+                with open(results_path, "r", encoding="utf-8") as f:
+                    res_data = json.load(f)
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    meta_data = json.load(f)
+                
+                resp = {
+                    "metadata": meta_data,
+                    "summary_metrics": res_data.get("summary_metrics", {}),
+                    "baseline_metrics": res_data.get("baseline_metrics", {}),
+                    "ablation_comparison": res_data.get("ablation_comparison", []),
+                    "total_queries": res_data.get("total_queries", 0),
+                    "total_candidates": res_data.get("total_candidates", 0),
+                    "retrieval_results": res_data.get("retrieval_results", {}),
+                    "failure_summary": res_data.get("failure_summary", {}),
+                    "figures": {
+                        "query_retrieval_gallery": "/outputs/poc5/query_retrieval_gallery.png",
+                        "similarity_ranking_curve": "/outputs/poc5/similarity_ranking_curve.png",
+                        "retrieval_score_distribution": "/outputs/poc5/retrieval_score_distribution.png",
+                        "cross_sensor_embedding_space": "/outputs/poc5/cross_sensor_embedding_space.png",
+                        "ablation_baseline_comparison": "/outputs/poc5/ablation_baseline_comparison.png",
+                        "failure_analysis_breakdown": "/outputs/poc5/failure_analysis_breakdown.png",
+                    }
+                }
+                self.send_json_response(resp)
+            else:
+                self.send_error(404, "POC 5 demo artifacts not generated yet. Run scripts/demo_poc5.py")
+            return
+
         # 4. Static Frontend Routing
         if path == "/" or path == "/index.html":
             self.serve_file(WEB_DIR / "index.html", "text/html")
@@ -171,6 +214,19 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
             except Exception as e:
                 logger.error(f"POC-4 execution error: {e}", exc_info=True)
                 self.send_error(500, f"POC-4 run failed: {str(e)}")
+            return
+
+        if path == "/api/poc5/run":
+            try:
+                from scripts.demo_poc5 import run_poc5_demo
+                logger.info("Triggering POC-5 Multimodal Retrieval Run via Web API...")
+                run_poc5_demo()
+                results_path = PROJECT_ROOT / "outputs" / "poc5" / "poc5_results.json"
+                with open(results_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            except Exception as e:
+                logger.error(f"POC-5 execution error: {e}", exc_info=True)
+                self.send_error(500, f"POC-5 run failed: {str(e)}")
             return
 
         self.send_error(404, "Endpoint not found")

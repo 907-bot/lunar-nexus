@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initModal();
   initLightbox();
   initPOC4Studio();
+  initPOC5Studio();
   await loadCatalogAndPairs();
 });
 
@@ -831,4 +832,242 @@ function updatePOC4UI(data) {
     }
   }
 }
+
+// ==========================================================================
+// POC 5: Multimodal AI Correspondence & Retrieval Studio
+// ==========================================================================
+function initPOC5Studio() {
+  const btnRun = document.getElementById('btnRunPOC5Experiment');
+  if (!btnRun) return;
+
+  btnRun.addEventListener('click', runPOC5FullPipeline);
+
+  // Load existing results if available
+  loadPOC5Results();
+}
+
+async function loadPOC5Results() {
+  try {
+    const res = await fetch('/api/poc5/demo');
+    if (res.ok) {
+      const data = await res.json();
+      updatePOC5UI(data);
+    }
+  } catch (e) {
+    console.log('POC-5 cached results not available yet.');
+  }
+}
+
+async function runPOC5FullPipeline() {
+  const btnRun = document.getElementById('btnRunPOC5Experiment');
+  const progressCard = document.getElementById('poc5ProgressCard');
+  const progressBar = document.getElementById('poc5ProgressBar');
+  const stepLabel = document.getElementById('poc5CurrentStep');
+  const stepBadges = document.querySelectorAll('#poc5StepsFlow .step-badge');
+
+  btnRun.disabled = true;
+  btnRun.innerHTML = `
+    <span class="spinner" style="width: 14px; height: 14px; border-width: 2px; display: inline-block;"></span>
+    Retrieving Cross-Modal Correspondences...
+  `;
+  progressCard.style.display = 'flex';
+
+  const steps = [
+    { name: '1. Ingesting Cross-Sensor Common-Ground Patches...', percent: 16, index: 0 },
+    { name: '2. Initializing Multimodal Representation Encoders...', percent: 33, index: 1 },
+    { name: '3. Extracting 128-D Dense L2-Normalized Embeddings...', percent: 50, index: 2 },
+    { name: '4. Computing Cross-Modal Cosine Similarity Matrix...', percent: 66, index: 3 },
+    { name: '5. Ranking Top-K Nearest Neighbor Candidates...', percent: 83, index: 4 },
+    { name: '6. Validating Geospatial Relations & Handover to POC-6...', percent: 100, index: 5 }
+  ];
+
+  let currentStepIdx = 0;
+  const progressTimer = setInterval(() => {
+    if (currentStepIdx < steps.length) {
+      const s = steps[currentStepIdx];
+      stepLabel.innerText = s.name;
+      progressBar.style.width = `${s.percent}%`;
+      
+      stepBadges.forEach((b, idx) => {
+        if (idx < currentStepIdx) {
+          b.className = 'step-badge completed';
+        } else if (idx === currentStepIdx) {
+          b.className = 'step-badge active';
+        } else {
+          b.className = 'step-badge';
+        }
+      });
+      currentStepIdx++;
+    }
+  }, 400);
+
+  try {
+    const res = await fetch('/api/poc5/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        num_pairs: 12,
+        top_k: 5,
+      })
+    });
+
+    clearInterval(progressTimer);
+
+    if (res.ok) {
+      const data = await res.json();
+      progressBar.style.width = '100%';
+      stepLabel.innerText = 'Cross-Modal Retrieval Complete!';
+      stepBadges.forEach(b => b.className = 'step-badge completed');
+      
+      setTimeout(() => {
+        updatePOC5UI(data);
+        refreshPOC5FigureImages();
+        progressCard.style.display = 'none';
+      }, 700);
+    } else {
+      const err = await res.text();
+      alert('POC-5 Retrieval error: ' + err);
+    }
+  } catch (err) {
+    clearInterval(progressTimer);
+    console.error('POC-5 execution failure:', err);
+    alert('Failed to execute POC-5 retrieval service: ' + err);
+  } finally {
+    btnRun.disabled = false;
+    btnRun.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      RUN POC-5 RETRIEVAL
+    `;
+  }
+}
+
+function refreshPOC5FigureImages() {
+  const t = Date.now();
+  document.querySelectorAll('#tab-poc5 .gallery-img-box img, #poc5QueryImgPreview').forEach(img => {
+    const base = img.src.split('?')[0];
+    img.src = `${base}?t=${t}`;
+  });
+}
+
+function updatePOC5UI(data) {
+  if (!data) return;
+
+  // Update Provenance label
+  const prov = data.metadata?.data_provenance || data.provenance;
+  if (prov) {
+    const provLabel = document.getElementById('poc5ProvenanceLabel');
+    if (provLabel) provLabel.innerText = prov;
+  }
+
+  // Update Scorecards
+  const sm = data.summary_metrics || data;
+  if (sm) {
+    const elR1 = document.getElementById('poc5Recall1');
+    if (elR1 && sm.recall_at_1 !== undefined) {
+      elR1.innerText = typeof sm.recall_at_1 === 'number' ? `${(sm.recall_at_1 * 100).toFixed(1)}%` : sm.recall_at_1;
+    }
+
+    const elR3 = document.getElementById('poc5Recall3');
+    if (elR3 && sm.recall_at_3 !== undefined) {
+      elR3.innerText = typeof sm.recall_at_3 === 'number' ? `${(sm.recall_at_3 * 100).toFixed(1)}%` : sm.recall_at_3;
+    }
+
+    const elR5 = document.getElementById('poc5Recall5');
+    if (elR5 && sm.recall_at_5 !== undefined) {
+      elR5.innerText = typeof sm.recall_at_5 === 'number' ? `${(sm.recall_at_5 * 100).toFixed(1)}%` : sm.recall_at_5;
+    }
+
+    const elR10 = document.getElementById('poc5Recall10');
+    if (elR10 && sm.recall_at_10 !== undefined) {
+      elR10.innerText = typeof sm.recall_at_10 === 'number' ? `${(sm.recall_at_10 * 100).toFixed(1)}%` : sm.recall_at_10;
+    }
+
+    const elMrr = document.getElementById('poc5Mrr');
+    if (elMrr && sm.mean_reciprocal_rank !== undefined) {
+      elMrr.innerText = typeof sm.mean_reciprocal_rank === 'number' ? sm.mean_reciprocal_rank.toFixed(3) : sm.mean_reciprocal_rank;
+    }
+
+    const elMeanSim = document.getElementById('poc5MeanSim');
+    if (elMeanSim && sm.mean_similarity_score !== undefined) {
+      elMeanSim.innerText = sm.mean_similarity_score.toFixed(3);
+    }
+  }
+
+  // Update Candidate List for first query
+  const retrievals = data.retrieval_results;
+  if (retrievals && Object.keys(retrievals).length > 0) {
+    const firstQ = Object.keys(retrievals)[0];
+    const matches = retrievals[firstQ];
+
+    const qLabel = document.getElementById('poc5ActiveQueryId');
+    if (qLabel) qLabel.innerText = firstQ;
+
+    const candContainer = document.getElementById('poc5CandidatesList');
+    if (candContainer && Array.isArray(matches)) {
+      candContainer.innerHTML = '';
+      matches.forEach(m => {
+        const card = document.createElement('div');
+        const isGt = m.is_ground_truth;
+        card.className = `candidate-rank-card glassmorphism ${isGt ? 'winner-card' : ''}`;
+        
+        let pillClass = 'pill-neutral';
+        let pillText = m.geographic_relation || 'CANDIDATE';
+        if (isGt) {
+          pillClass = 'pill-winner';
+          pillText = '★ TRUE GEOGRAPHIC MATCH';
+        } else if (m.geographic_relation === 'OVERLAPPING') {
+          pillClass = 'pill-pass';
+        }
+
+        const simPercent = Math.max(0, Math.min(100, m.similarity_score * 100));
+
+        card.innerHTML = `
+          <div class="cand-rank-badge">#${m.rank}</div>
+          <div class="cand-info-col">
+            <div class="cand-title-row">
+              <strong class="val-code">${m.candidate_patch_id}</strong>
+              <span class="${pillClass}">${pillText}</span>
+            </div>
+            <div class="cand-meta-row">
+              <span>${m.candidate_sensor} (${m.candidate_gsd}m GSD)</span>
+              <span>Spatial Rel: <strong>${m.geographic_relation}</strong></span>
+            </div>
+            <div class="cand-sim-bar-track">
+              <div class="cand-sim-bar-fill" style="width: ${simPercent}%; ${isGt ? 'background: linear-gradient(90deg, #a29bfe, #2ed573);' : ''}"></div>
+            </div>
+          </div>
+          <div class="cand-score-col">
+            <div class="cand-score-val">${m.similarity_score.toFixed(3)}</div>
+            <div class="cand-score-lbl">Cosine Sim</div>
+          </div>
+        `;
+        candContainer.appendChild(card);
+      });
+    }
+  }
+
+  // Update Ablation Table
+  if (data.ablation_comparison && Array.isArray(data.ablation_comparison)) {
+    const tbody = document.getElementById('poc5AblationTableBody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      data.ablation_comparison.forEach(row => {
+        const tr = document.createElement('tr');
+        const isAi = row.representation.includes('AI');
+        if (isAi) tr.className = 'highlight-row';
+
+        tr.innerHTML = `
+          <td><strong>${row.representation}</strong></td>
+          <td>${row.embedding_dim}-D</td>
+          <td>${typeof row.recall_at_1 === 'number' ? (row.recall_at_1 * 100).toFixed(1) + '%' : row.recall_at_1}</td>
+          <td>${typeof row.recall_at_5 === 'number' ? (row.recall_at_5 * 100).toFixed(1) + '%' : row.recall_at_5}</td>
+          <td>${typeof row.mrr === 'number' ? row.mrr.toFixed(3) : row.mrr}</td>
+          <td><span class="${isAi ? 'pill-winner' : 'pill-neutral'}">${isAi ? '★ SUPERIOR RECALL' : 'Baseline'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+}
+
 

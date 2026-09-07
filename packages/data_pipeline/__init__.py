@@ -92,6 +92,31 @@ from .poc4_visualization import (
     generate_illumination_scale_heatmap_figure,
     generate_ablation_results_figure,
 )
+from .poc5_models import (
+    MultimodalPatchEmbedding,
+    BaseMultimodalEncoder,
+    DeterministicMultimodalProxyEncoder,
+    PixelBaselineEncoder,
+    PretrainedMultimodalEncoder,
+)
+from .poc5_retrieval import (
+    MultimodalCandidateMatch,
+    CrossModalRetrievalEngine,
+    compute_geographic_relation,
+)
+from .poc5_metrics import (
+    RetrievalMetricsReport,
+    compute_retrieval_metrics,
+    FailureCaseRecord,
+    POC5FailureCaseTracker,
+)
+from .poc5_experiment import (
+    POC5ExperimentRunner,
+    load_or_create_poc5_test_collection,
+)
+from .poc5_visualization import (
+    generate_all_poc5_figures,
+)
 
 __all__ = [
     "SensorType",
@@ -158,5 +183,22 @@ __all__ = [
     "generate_metrics_comparison_figure",
     "generate_illumination_scale_heatmap_figure",
     "generate_ablation_results_figure",
+    # POC-5 Multimodal AI Correspondence
+    "MultimodalPatchEmbedding",
+    "BaseMultimodalEncoder",
+    "DeterministicMultimodalProxyEncoder",
+    "PixelBaselineEncoder",
+    "PretrainedMultimodalEncoder",
+    "MultimodalCandidateMatch",
+    "CrossModalRetrievalEngine",
+    "compute_geographic_relation",
+    "RetrievalMetricsReport",
+    "compute_retrieval_metrics",
+    "FailureCaseRecord",
+    "POC5FailureCaseTracker",
+    "POC5ExperimentRunner",
+    "load_or_create_poc5_test_collection",
+    "generate_all_poc5_figures",
 ]
+
 

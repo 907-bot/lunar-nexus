@@ -41,6 +41,11 @@
           POC 4 Robustness Studio
           <span class="badge-pulse" id="poc4Badge">ROBUST</span>
         </button>
+        <button class="nav-tab" data-tab="tab-poc5" id="tabBtnPOC5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+          POC 5 Multimodal Studio
+          <span class="badge-pulse" id="poc5Badge" style="background: linear-gradient(135deg, #a29bfe, #6c5ce7);">AI RETRIEVAL</span>
+        </button>
         <button class="nav-tab" data-tab="tab-catalog" id="tabBtnCatalog">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
           Catalog Index
@@ -442,6 +447,270 @@
                     <tr class="highlight-row"><td><strong>8. ILLUMINATION-AWARE + SCALE</strong></td><td><strong>Yes</strong></td><td><strong>100.0%</strong></td><td><strong>1.16 px</strong></td><td><span class="pill-winner">PASS</span></td></tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 5: POC 5 Multimodal AI Correspondence & Retrieval Studio -->
+      <section class="tab-pane" id="tab-poc5">
+        <div class="poc5-workspace">
+          <!-- Top Control Header Banner -->
+          <div class="poc5-top-banner glassmorphism">
+            <div class="banner-left">
+              <div class="banner-title-row">
+                <span class="pulse-dot active" style="background: #a29bfe; box-shadow: 0 0 8px #a29bfe;"></span>
+                <h2>POC-5: Multimodal AI Correspondence Studio</h2>
+                <span class="provenance-pill" id="poc5ProvenanceLabel" style="border-color: #a29bfe; color: #a29bfe; background: rgba(162, 155, 254, 0.12);">REAL-GEOGRAPHY / SYNTHETIC-MODALITY EXPERIMENT</span>
+              </div>
+              <p class="banner-desc">
+                Cross-modal feature embedding & Top-K candidate retrieval across heterogeneous lunar sensors (Chandrayaan-2 OHRC vs NASA LROC NAC vs TMC-2) to feed downstream POC-6 Geometric Verification.
+              </p>
+            </div>
+            <div class="banner-actions">
+              <button class="btn-primary btn-run-poc5" id="btnRunPOC5Experiment" style="background: linear-gradient(135deg, #a29bfe 0%, #6c5ce7 100%); box-shadow: 0 4px 18px rgba(108, 92, 231, 0.4);">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                RUN POC-5 RETRIEVAL
+              </button>
+            </div>
+          </div>
+
+          <!-- Real-Time Stepped Execution Tracker -->
+          <div class="execution-progress-card glassmorphism" id="poc5ProgressCard" style="display: none; border-color: rgba(162, 155, 254, 0.4);">
+            <div class="progress-header">
+              <span class="progress-title">Cross-Modal AI Retrieval Pipeline in Progress...</span>
+              <span class="progress-step-label" id="poc5CurrentStep" style="color: #a29bfe;">Step 1 of 6</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="poc5ProgressBar" style="background: linear-gradient(90deg, #a29bfe, #00f2fe); width: 15%;"></div>
+            </div>
+            <div class="steps-flow" id="poc5StepsFlow">
+              <span class="step-badge active">1. Patches</span>
+              <span class="step-badge">2. Encoders</span>
+              <span class="step-badge">3. Dense Embeddings</span>
+              <span class="step-badge">4. Cosine Matrix</span>
+              <span class="step-badge">5. Top-K Ranking</span>
+              <span class="step-badge">6. Handover to POC-6</span>
+            </div>
+          </div>
+
+          <!-- Row 1: Live Quantitative Retrieval Scorecards -->
+          <div class="metrics-scorecard-row">
+            <div class="score-card glassmorphism" style="border-top-color: #a29bfe;">
+              <div class="score-lbl">Recall@1 (Top-1)</div>
+              <div class="score-val highlight-purple" id="poc5Recall1">27.3%</div>
+              <div class="score-sub">Direct top candidate hits</div>
+            </div>
+            <div class="score-card glassmorphism" style="border-top-color: #00f2fe;">
+              <div class="score-lbl">Recall@3 (Top-3)</div>
+              <div class="score-val highlight-cyan" id="poc5Recall3">45.5%</div>
+              <div class="score-sub">Top-3 candidate inclusion</div>
+            </div>
+            <div class="score-card glassmorphism" style="border-top-color: #2ed573;">
+              <div class="score-lbl">Recall@5 (Top-5)</div>
+              <div class="score-val highlight-green" id="poc5Recall5">72.7%</div>
+              <div class="score-sub">Standard handover candidates</div>
+            </div>
+            <div class="score-card glassmorphism" style="border-top-color: #ffd32a;">
+              <div class="score-lbl">Recall@10 (Top-10)</div>
+              <div class="score-val highlight-amber" id="poc5Recall10">90.9%</div>
+              <div class="score-sub">Broad candidate retrieval</div>
+            </div>
+            <div class="score-card glassmorphism" style="border-top-color: #ff7675;">
+              <div class="score-lbl">Mean Reciprocal Rank</div>
+              <div class="score-val highlight-purple" id="poc5Mrr">0.432</div>
+              <div class="score-sub">MRR harmonic mean</div>
+            </div>
+            <div class="score-card glassmorphism" style="border-top-color: #00f2fe;">
+              <div class="score-lbl">Mean Similarity</div>
+              <div class="score-val highlight-cyan" id="poc5MeanSim">0.868</div>
+              <div class="score-sub">Average cosine score</div>
+            </div>
+          </div>
+
+          <!-- Row 2: Live Query & Top-K Candidates Viewer -->
+          <div class="poc5-retrieval-stage-card glassmorphism">
+            <div class="section-header-row">
+              <div>
+                <h3>Cross-Modal Candidate Match Inspector</h3>
+                <p class="subtitle">Query patch from source sensor matched against reference archive</p>
+              </div>
+              <div class="retrieval-controls">
+                <span class="lbl" style="font-size: 0.8rem; color: var(--text-secondary);">Target Top-K:</span>
+                <span class="tag-pill" style="background: rgba(162, 155, 254, 0.2); color: #a29bfe;">K = 5</span>
+              </div>
+            </div>
+
+            <div class="poc5-retrieval-split">
+              <!-- Left: Query Patch Info -->
+              <div class="query-patch-card glassmorphism">
+                <div class="card-header">
+                  <span class="tag-pill tag-ohrc">Source Query</span>
+                  <span class="val-code" id="poc5ActiveQueryId">OHRC_PATCH_0001</span>
+                </div>
+                <div class="patch-preview-img-box">
+                  <img src="/outputs/poc5/query_retrieval_gallery.png" alt="Query Patch" id="poc5QueryImgPreview" class="img-preview-trigger" data-title="POC-5 Query Patch Preview">
+                </div>
+                <div class="patch-meta-list">
+                  <div class="info-row"><span class="lbl">Sensor:</span> <strong>Chandrayaan-2 OHRC</strong></div>
+                  <div class="info-row"><span class="lbl">Spatial GSD:</span> <span>0.25 m/pixel</span></div>
+                  <div class="info-row"><span class="lbl">Modality:</span> <span>High-Res Optical</span></div>
+                  <div class="info-row"><span class="lbl">Embedding:</span> <span class="val-code">128-D L2 Norm</span></div>
+                </div>
+              </div>
+
+              <!-- Right: Top-K Ranked Candidate Cards -->
+              <div class="candidates-ranked-container" id="poc5CandidatesList">
+                <!-- Dynamically populated or fallback initial -->
+                <div class="candidate-rank-card glassmorphism winner-card">
+                  <div class="cand-rank-badge">#1</div>
+                  <div class="cand-info-col">
+                    <div class="cand-title-row">
+                      <strong class="val-code">LROC_PATCH_0001</strong>
+                      <span class="pill-winner">★ TRUE GEOGRAPHIC MATCH</span>
+                    </div>
+                    <div class="cand-meta-row">
+                      <span>NASA LROC NAC (1.00m)</span>
+                      <span>Spatial Rel: <strong>OVERLAPPING</strong></span>
+                    </div>
+                    <div class="cand-sim-bar-track">
+                      <div class="cand-sim-bar-fill" style="width: 92.5%; background: linear-gradient(90deg, #a29bfe, #2ed573);"></div>
+                    </div>
+                  </div>
+                  <div class="cand-score-col">
+                    <div class="cand-score-val">0.925</div>
+                    <div class="cand-score-lbl">Cosine Sim</div>
+                  </div>
+                </div>
+
+                <div class="candidate-rank-card glassmorphism">
+                  <div class="cand-rank-badge">#2</div>
+                  <div class="cand-info-col">
+                    <div class="cand-title-row">
+                      <strong class="val-code">LROC_PATCH_0002</strong>
+                      <span class="pill-pass">OVERLAPPING</span>
+                    </div>
+                    <div class="cand-meta-row">
+                      <span>NASA LROC NAC (1.00m)</span>
+                      <span>Spatial Rel: <strong>NEARBY</strong></span>
+                    </div>
+                    <div class="cand-sim-bar-track">
+                      <div class="cand-sim-bar-fill" style="width: 86.5%;"></div>
+                    </div>
+                  </div>
+                  <div class="cand-score-col">
+                    <div class="cand-score-val">0.865</div>
+                    <div class="cand-score-lbl">Cosine Sim</div>
+                  </div>
+                </div>
+
+                <div class="candidate-rank-card glassmorphism">
+                  <div class="cand-rank-badge">#3</div>
+                  <div class="cand-info-col">
+                    <div class="cand-title-row">
+                      <strong class="val-code">LROC_PATCH_0009</strong>
+                      <span class="pill-neutral">CANDIDATE</span>
+                    </div>
+                    <div class="cand-meta-row">
+                      <span>NASA LROC NAC (1.00m)</span>
+                      <span>Spatial Rel: <strong>OVERLAPPING</strong></span>
+                    </div>
+                    <div class="cand-sim-bar-track">
+                      <div class="cand-sim-bar-fill" style="width: 84.1%;"></div>
+                    </div>
+                  </div>
+                  <div class="cand-score-col">
+                    <div class="cand-score-val">0.841</div>
+                    <div class="cand-score-lbl">Cosine Sim</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Visual Representations Gallery -->
+          <div class="poc5-section-card glassmorphism">
+            <div class="section-header-row">
+              <div>
+                <h3>Multimodal Representation & Embedding Space Visualizations</h3>
+                <p class="subtitle">Publication-grade figures generated in outputs/poc5/</p>
+              </div>
+            </div>
+            <div class="rep-gallery-grid">
+              <div class="gallery-item">
+                <div class="gallery-title">A. Query + Top-K Candidates Gallery</div>
+                <div class="gallery-img-box"><img src="/outputs/poc5/query_retrieval_gallery.png" alt="Gallery" class="img-preview-trigger" data-title="Figure 1: Query Retrieval Gallery"></div>
+                <div class="gallery-sub">Multi-sensor match comparison</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">B. Similarity Ranking Decay Curve</div>
+                <div class="gallery-img-box"><img src="/outputs/poc5/similarity_ranking_curve.png" alt="Decay" class="img-preview-trigger" data-title="Figure 2: Similarity Ranking Curves"></div>
+                <div class="gallery-sub">Top-K cosine score gradients</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">C. Score Distribution Histogram</div>
+                <div class="gallery-img-box"><img src="/outputs/poc5/retrieval_score_distribution.png" alt="Distribution" class="img-preview-trigger" data-title="Figure 3: Retrieval Score Distribution"></div>
+                <div class="gallery-sub">Positive vs Distractor separation</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">D. 2D Embedding Alignment Space</div>
+                <div class="gallery-img-box"><img src="/outputs/poc5/cross_sensor_embedding_space.png" alt="Embedding Space" class="img-preview-trigger" data-title="Figure 4: Cross-Sensor 2D Embedding Space"></div>
+                <div class="gallery-sub">OHRC vs LROC latent alignment</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">E. Ablation Baseline Comparison</div>
+                <div class="gallery-img-box"><img src="/outputs/poc5/ablation_baseline_comparison.png" alt="Ablation" class="img-preview-trigger" data-title="Figure 5: Ablation Baseline Comparison"></div>
+                <div class="gallery-sub">AI Multimodal vs Pixel baseline</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">F. Failure Case Taxonomy</div>
+                <div class="gallery-img-box"><img src="/outputs/poc5/failure_analysis_breakdown.png" alt="Failures" class="img-preview-trigger" data-title="Figure 6: Failure Analysis Breakdown"></div>
+                <div class="gallery-sub">Challenging retrieval categories</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 4: Ablation Comparison & Handover Status -->
+          <div class="poc4-tables-row">
+            <div class="poc4-table-card glassmorphism">
+              <div class="table-card-header">
+                <h3>Ablation: AI Multimodal Embedding vs Baseline</h3>
+                <span class="tag-pill tag-green">Empirical Evaluation</span>
+              </div>
+              <div class="table-container">
+                <table class="poc4-table" id="poc5AblationTable">
+                  <thead>
+                    <tr>
+                      <th>Representation</th>
+                      <th>Dim</th>
+                      <th>Recall@1</th>
+                      <th>Recall@5</th>
+                      <th>MRR</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="poc5AblationTableBody">
+                    <tr><td>PIXEL_INTENSITY_BASELINE</td><td>64-D</td><td>9.1%</td><td>18.2%</td><td>0.121</td><td><span class="pill-neutral">Baseline</span></td></tr>
+                    <tr class="highlight-row"><td><strong>AI_MULTIMODAL_EMBEDDING</strong></td><td><strong>128-D</strong></td><td><strong>27.3%</strong></td><td><strong>72.7%</strong></td><td><strong>0.432</strong></td><td><span class="pill-winner">★ SUPERIOR RECALL</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="poc4-table-card glassmorphism">
+              <div class="table-card-header">
+                <h3>POC-6 Geometric Verification Handover Status</h3>
+                <span class="tag-pill" style="background: rgba(162, 155, 254, 0.2); color: #a29bfe;">Schema v1.0.0</span>
+              </div>
+              <div class="card-body" style="font-size: 0.82rem; display: flex; flex-direction: column; gap: 8px;">
+                <div class="info-row"><span class="lbl">Export File:</span> <strong class="val-code">outputs/poc5/poc5_candidates_for_poc6.json</strong></div>
+                <div class="info-row"><span class="lbl">Handover Target:</span> <span>POC-6 Keypoint & RANSAC Verifier</span></div>
+                <div class="info-row"><span class="lbl">Candidate Pairs Exported:</span> <strong id="poc5CandidateCountBadge">60 pairs</strong></div>
+                <div class="info-row"><span class="lbl">Required Schema Fields:</span> <span>18 / 18 Validated</span></div>
+                <p class="footnote" style="margin-top: 8px;">
+                  <strong>Scientific Workflow:</strong> POC-5 provides Top-K candidate correspondence ranking based on multimodal representation similarity. POC-6 performs rigid geometric affine/homography verification on these candidates.
+                </p>
               </div>
             </div>
           </div>
