@@ -34,6 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initModal();
   initLightbox();
   initPOC4Studio();
+  initPOC5Studio();
   await loadCatalogAndPairs();
 });
 
@@ -621,11 +622,53 @@ function initLightbox() {
   });
 }
 
+// ==========================================================================
+// POC 4: Illumination + Scale Robustness Studio Engine
+// ==========================================================================
+let currentPOC4Data = null;
+let currentPOC4Seed = 42;
+
+function showPOC4Toast(msg) {
+  let toast = document.getElementById('poc4Toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'poc4Toast';
+    toast.className = 'nexus-toast';
+    document.body.appendChild(toast);
+  }
+  toast.innerText = msg;
+  toast.classList.add('visible');
+  setTimeout(() => {
+    toast.classList.remove('visible');
+  }, 3800);
+}
+
 function initPOC4Studio() {
   const btnRun = document.getElementById('btnRunPOC4Experiment');
-  if (!btnRun) return;
+  const btnReroll = document.getElementById('btnRerollPOC4');
+  const selectCond = document.getElementById('poc4ConditionSelect');
+  const selectScale = document.getElementById('poc4ScaleSelect');
 
-  btnRun.addEventListener('click', runPOC4FullPipeline);
+  if (btnRun) {
+    btnRun.addEventListener('click', () => runPOC4FullPipeline(42));
+  }
+  if (btnReroll) {
+    btnReroll.addEventListener('click', () => {
+      const randomSeed = Math.floor(Math.random() * 90000 + 10000);
+      runPOC4FullPipeline(randomSeed);
+    });
+  }
+
+  if (selectCond) {
+    selectCond.addEventListener('change', () => {
+      if (currentPOC4Data) renderPOC4DynamicView(currentPOC4Data);
+    });
+  }
+  if (selectScale) {
+    selectScale.addEventListener('change', () => {
+      if (currentPOC4Data) renderPOC4DynamicView(currentPOC4Data);
+    });
+  }
 
   // Load existing results if available
   loadPOC4Results();
@@ -636,26 +679,32 @@ async function loadPOC4Results() {
     const res = await fetch('/api/poc4/results');
     if (res.ok) {
       const data = await res.json();
-      updatePOC4UI(data);
+      currentPOC4Data = data;
+      renderPOC4DynamicView(data);
     }
   } catch (e) {
     console.log('POC-4 cached results not available yet.');
   }
 }
 
-async function runPOC4FullPipeline() {
+async function runPOC4FullPipeline(seed = 42) {
   const btnRun = document.getElementById('btnRunPOC4Experiment');
+  const btnReroll = document.getElementById('btnRerollPOC4');
   const progressCard = document.getElementById('poc4ProgressCard');
   const progressBar = document.getElementById('poc4ProgressBar');
   const stepLabel = document.getElementById('poc4CurrentStep');
   const stepBadges = document.querySelectorAll('#poc4StepsFlow .step-badge');
 
-  btnRun.disabled = true;
-  btnRun.innerHTML = `
-    <span class="spinner" style="width: 14px; height: 14px; border-width: 2px; display: inline-block;"></span>
-    Running Experiment Matrix...
-  `;
-  progressCard.style.display = 'flex';
+  if (btnRun) btnRun.disabled = true;
+  if (btnReroll) btnReroll.disabled = true;
+
+  if (btnRun) {
+    btnRun.innerHTML = `
+      <span class="spinner" style="width: 14px; height: 14px; border-width: 2px; display: inline-block;"></span>
+      Executing Matrix (Seed ${seed})...
+    `;
+  }
+  if (progressCard) progressCard.style.display = 'flex';
 
   const steps = [
     { name: '1. Ingesting Real Geographic Base Patch...', percent: 12, index: 0 },
@@ -673,8 +722,8 @@ async function runPOC4FullPipeline() {
   const progressTimer = setInterval(() => {
     if (currentStepIdx < steps.length) {
       const s = steps[currentStepIdx];
-      stepLabel.innerText = s.name;
-      progressBar.style.width = `${s.percent}%`;
+      if (stepLabel) stepLabel.innerText = s.name;
+      if (progressBar) progressBar.style.width = `${s.percent}%`;
       
       stepBadges.forEach((b, idx) => {
         if (idx < currentStepIdx) {
@@ -689,6 +738,8 @@ async function runPOC4FullPipeline() {
     }
   }, 450);
 
+  const startTime = Date.now();
+
   try {
     const res = await fetch('/api/poc4/run', {
       method: 'POST',
@@ -696,7 +747,7 @@ async function runPOC4FullPipeline() {
       body: JSON.stringify({
         source_product_id: 'ch2_ohr_ncp_20260103t1005176450_d_img_d18',
         reference_product_id: 'SYNTHETIC_LROC_CANDIDATE_P850S0250',
-        fast_mode: false
+        seed: seed
       })
     });
 
@@ -704,15 +755,20 @@ async function runPOC4FullPipeline() {
 
     if (res.ok) {
       const data = await res.json();
-      progressBar.style.width = '100%';
-      stepLabel.innerText = 'Experiment Completed Successfully!';
+      currentPOC4Data = data;
+      currentPOC4Seed = seed;
+      const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(2);
+
+      if (progressBar) progressBar.style.width = '100%';
+      if (stepLabel) stepLabel.innerText = `Experiment Completed in ${elapsedSec}s!`;
       stepBadges.forEach(b => b.className = 'step-badge completed');
       
       setTimeout(() => {
-        updatePOC4UI(data);
+        renderPOC4DynamicView(data);
         refreshFigureImages();
-        progressCard.style.display = 'none';
-      }, 800);
+        if (progressCard) progressCard.style.display = 'none';
+        showPOC4Toast(`✓ POC-4 Experiment Run Complete (Seed ${seed}, ${elapsedSec}s) — All figures and tables refreshed!`);
+      }, 700);
     } else {
       const err = await res.text();
       alert('POC-4 Experiment run error: ' + err);
@@ -722,11 +778,14 @@ async function runPOC4FullPipeline() {
     console.error('POC-4 execution failure:', err);
     alert('Failed to connect to POC-4 experiment service: ' + err);
   } finally {
-    btnRun.disabled = false;
-    btnRun.innerHTML = `
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-      RUN POC-4 EXPERIMENT
-    `;
+    if (btnRun) {
+      btnRun.disabled = false;
+      btnRun.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+        RUN EXPERIMENT (SEED 42)
+      `;
+    }
+    if (btnReroll) btnReroll.disabled = false;
   }
 }
 
@@ -738,97 +797,316 @@ function refreshFigureImages() {
   });
 }
 
-function updatePOC4UI(data) {
+function renderPOC4DynamicView(data) {
   if (!data) return;
 
-  // Update Provenance label
-  if (data.metadata?.data_provenance) {
-    const provLabel = document.getElementById('poc4ProvenanceLabel');
-    if (provLabel) provLabel.innerText = data.metadata.data_provenance;
+  const selectCond = document.getElementById('poc4ConditionSelect');
+  const selectScale = document.getElementById('poc4ScaleSelect');
+  const activeCond = selectCond ? selectCond.value : 'ALL';
+  const activeScale = selectScale ? selectScale.value : 'ALL';
+
+  // Update Provenance
+  const provLabel = document.getElementById('poc4ProvenanceLabel');
+  if (provLabel) {
+    provLabel.innerText = data.metadata?.data_provenance || 'REAL-GEOGRAPHY / SYNTHETIC-ILLUMINATION EXPERIMENT';
   }
 
-  // Update Scorecards
-  if (data.summary) {
-    const s = data.summary;
-    const bestRep = s.best_representation || 'MULTI-SCALE + ILLUMINATION-AWARE';
-    const repData = s.representation_metrics ? s.representation_metrics[bestRep] : null;
+  // Update Run Status Banner
+  const statusText = document.getElementById('poc4RunStatusText');
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString();
+  if (statusText) {
+    statusText.innerHTML = `<strong>Live Run Active</strong> (Seed: <code>${currentPOC4Seed}</code>) • Filter: <strong>${activeCond}</strong> | Scale: <strong>${activeScale}</strong> • Updated ${timeStr}`;
+  }
 
-    const elBestRep = document.getElementById('poc4BestRep');
-    if (elBestRep) elBestRep.innerText = bestRep;
+  // 1. Calculate representation metrics from matrix_results or summary
+  const matrix = data.matrix_results || [];
+  const repNames = ["RAW", "NORMALIZED", "GRADIENT", "MULTI-SCALE", "MULTI-SCALE + ILLUMINATION-AWARE"];
+  const repMetrics = {};
 
-    if (repData) {
-      const elSuccess = document.getElementById('poc4SuccessRate');
-      if (elSuccess) elSuccess.innerText = `${(repData.success_rate * 100).toFixed(1)}%`;
-
-      const elInlier = document.getElementById('poc4InlierRatio');
-      if (elInlier) elInlier.innerText = `${(repData.mean_inlier_ratio * 100).toFixed(1)}%`;
-
-      const elRecall1 = document.getElementById('poc4Recall1');
-      if (elRecall1) elRecall1.innerText = `${(repData.mean_recall_1 * 100).toFixed(1)}%`;
-
-      const elRmse = document.getElementById('poc4Rmse');
-      if (elRmse) elRmse.innerText = `${repData.mean_rmse.toFixed(2)} px`;
+  repNames.forEach(rName => {
+    let rows = matrix.filter(r => r.representation.toUpperCase() === rName.toUpperCase());
+    if (activeCond !== 'ALL') {
+      rows = rows.filter(r => r.illumination_condition.toUpperCase() === activeCond.toUpperCase());
     }
-  }
+    if (activeScale !== 'ALL') {
+      const sVal = parseFloat(activeScale);
+      rows = rows.filter(r => Math.abs(r.scale_factor - sVal) < 1e-3);
+    }
 
-  // Populate Baseline Comparison Table
-  if (data.summary?.representation_metrics) {
-    const tbody = document.getElementById('poc4ComparisonTableBody');
-    if (tbody) {
-      tbody.innerHTML = '';
-      const reps = data.summary.representation_metrics;
-      for (const [repName, m] of Object.entries(reps)) {
-        const tr = document.createElement('tr');
-        const isBest = repName.includes('MULTI-SCALE') && repName.includes('ILLUMINATION');
-        if (isBest) tr.className = 'highlight-row';
-
-        let pillClass = 'pill-fail';
-        let pillText = 'Baseline';
-        if (m.success_rate >= 0.7) {
-          pillClass = isBest ? 'pill-winner' : 'pill-pass';
-          pillText = isBest ? '★ BEST PERFORMER' : 'High Robustness';
-        } else if (m.success_rate >= 0.5) {
-          pillClass = 'pill-pass';
-          pillText = 'Scale Invariant';
-        } else if (m.success_rate >= 0.2) {
-          pillClass = 'pill-neutral';
-          pillText = 'Partial';
-        }
-
-        tr.innerHTML = `
-          <td><strong>${repName}</strong></td>
-          <td>${(m.success_rate * 100).toFixed(1)}%</td>
-          <td>${(m.mean_inlier_ratio * 100).toFixed(1)}%</td>
-          <td>${(m.mean_recall_1 * 100).toFixed(1)}%</td>
-          <td>${m.mean_rmse.toFixed(2)} px</td>
-          <td><span class="${pillClass}">${pillText}</span></td>
-        `;
-        tbody.appendChild(tr);
+    if (rows.length > 0) {
+      const succ = rows.filter(r => r.alignment_success).length / rows.length;
+      const inlier = rows.reduce((acc, r) => acc + (r.inlier_ratio || 0), 0) / rows.length;
+      const validRmse = rows.map(r => r.rmse).filter(val => isFinite(val) && val < 50);
+      const rmse = validRmse.length > 0 ? (validRmse.reduce((a, b) => a + b, 0) / validRmse.length) : 999.0;
+      const validR1 = rows.map(r => r.recall_at_1).filter(val => val !== null && val !== undefined);
+      const r1 = validR1.length > 0 ? (validR1.reduce((a, b) => a + b, 0) / validR1.length) : 0.0;
+      repMetrics[rName] = {
+        success_rate: succ,
+        mean_inlier_ratio: inlier,
+        mean_rmse: rmse,
+        mean_recall_1: r1,
+        evaluated_conditions: rows.length
+      };
+    } else {
+      const fallback = (data.summary && data.summary.representation_metrics) ? data.summary.representation_metrics[rName] : null;
+      if (fallback) {
+        repMetrics[rName] = fallback;
       }
     }
+  });
+
+  // 2. Determine best representation for current filter view
+  let bestRep = "MULTI-SCALE + ILLUMINATION-AWARE";
+  let bestScore = -1;
+  for (const [rName, m] of Object.entries(repMetrics)) {
+    const score = (m.success_rate * 50) + (m.mean_inlier_ratio * 30) + Math.max(0, 20 - Math.min(20, m.mean_rmse));
+    if (score > bestScore) {
+      bestScore = score;
+      bestRep = rName;
+    }
   }
 
-  // Populate Ablation Table
-  if (data.ablation) {
-    const tbody = document.getElementById('poc4AblationTableBody');
-    if (tbody && Array.isArray(data.ablation)) {
-      tbody.innerHTML = '';
-      data.ablation.forEach(row => {
-        const tr = document.createElement('tr');
-        const isPass = row.success;
-        const isBest = row.config_name.includes('ILLUMINATION-AWARE') && row.scale_harmonized;
-        if (isBest) tr.className = 'highlight-row';
+  // 3. Update Scorecards with values & Flash animation
+  const elBestRep = document.getElementById('poc4BestRep');
+  if (elBestRep) elBestRep.innerText = bestRep;
 
-        tr.innerHTML = `
-          <td>${row.config_name}</td>
-          <td>${row.scale_harmonized ? 'Yes' : 'No'}</td>
-          <td>${(row.inlier_ratio * 100).toFixed(1)}%</td>
-          <td>${row.rmse < 900 ? row.rmse.toFixed(2) + ' px' : '999.00 px'}</td>
-          <td><span class="${isBest ? 'pill-winner' : (isPass ? 'pill-pass' : 'pill-fail')}">${isPass ? 'PASS' : 'FAIL'}</span></td>
-        `;
-        tbody.appendChild(tr);
-      });
+  const targetBest = repMetrics[bestRep] || repMetrics["MULTI-SCALE + ILLUMINATION-AWARE"] || repMetrics["MULTI-SCALE"];
+  if (targetBest) {
+    const elSuccess = document.getElementById('poc4SuccessRate');
+    const elInlier = document.getElementById('poc4InlierRatio');
+    const elRecall1 = document.getElementById('poc4Recall1');
+    const elRmse = document.getElementById('poc4Rmse');
+
+    if (elSuccess) elSuccess.innerText = `${(targetBest.success_rate * 100).toFixed(1)}%`;
+    if (elInlier) elInlier.innerText = `${(targetBest.mean_inlier_ratio * 100).toFixed(1)}%`;
+    if (elRecall1) elRecall1.innerText = `${(targetBest.mean_recall_1 * 100).toFixed(1)}%`;
+    if (elRmse) elRmse.innerText = `${targetBest.mean_rmse < 900 ? targetBest.mean_rmse.toFixed(2) + ' px' : '999.00 px'}`;
+  }
+
+  // Flash scorecard for feedback
+  document.querySelectorAll('.score-card').forEach(card => {
+    card.classList.remove('card-flash');
+    void card.offsetWidth;
+    card.classList.add('card-flash');
+  });
+
+  // 4. Populate Baseline Comparison Table
+  const tbody = document.getElementById('poc4ComparisonTableBody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    for (const [repName, m] of Object.entries(repMetrics)) {
+      const tr = document.createElement('tr');
+      const isWinner = repName === bestRep;
+      if (isWinner) tr.className = 'highlight-row';
+
+      let pillClass = 'pill-fail';
+      let pillText = 'Baseline';
+      if (m.success_rate >= 0.7) {
+        pillClass = isWinner ? 'pill-winner' : 'pill-pass';
+        pillText = isWinner ? '★ BEST PERFORMER' : 'High Robustness';
+      } else if (m.success_rate >= 0.5) {
+        pillClass = 'pill-pass';
+        pillText = 'Scale Invariant';
+      } else if (m.success_rate >= 0.2) {
+        pillClass = 'pill-neutral';
+        pillText = 'Partial';
+      }
+
+      tr.innerHTML = `
+        <td><strong>${repName}</strong></td>
+        <td>${(m.success_rate * 100).toFixed(1)}%</td>
+        <td>${(m.mean_inlier_ratio * 100).toFixed(1)}%</td>
+        <td>${(m.mean_recall_1 * 100).toFixed(1)}%</td>
+        <td>${m.mean_rmse < 900 ? m.mean_rmse.toFixed(2) + ' px' : '999.00 px'}</td>
+        <td><span class="${pillClass}">${pillText}</span></td>
+      `;
+      tbody.appendChild(tr);
+    }
+  }
+
+  // 5. Populate Ablation Table
+  const ablBody = document.getElementById('poc4AblationTableBody');
+  const ablationList = data.ablation_results || data.ablation || [];
+  if (ablBody && ablationList.length > 0) {
+    ablBody.innerHTML = '';
+    ablationList.forEach(row => {
+      const tr = document.createElement('tr');
+      const cfg = row.configuration || row.config_name || '';
+      const isPass = row.alignment_success !== undefined ? row.alignment_success : row.success;
+      const isBest = cfg.includes('ILLUMINATION-AWARE') && row.scale_harmonized;
+      if (isBest) tr.className = 'highlight-row';
+
+      tr.innerHTML = `
+        <td>${cfg}</td>
+        <td>${row.scale_harmonized ? 'Yes' : 'No'}</td>
+        <td>${((row.inlier_ratio || 0) * 100).toFixed(1)}%</td>
+        <td>${(row.rmse < 900 ? (row.rmse || 0).toFixed(2) + ' px' : '999.00 px')}</td>
+        <td><span class="${isBest ? 'pill-winner' : (isPass ? 'pill-pass' : 'pill-fail')}">${isPass ? 'PASS' : 'FAIL'}</span></td>
+      `;
+      ablBody.appendChild(tr);
+    });
+  }
+}
+
+// ==========================================================================
+// POC-5 Multimodal AI Correspondence Studio
+// ==========================================================================
+let poc5Data = null;
+
+function initPOC5Studio() {
+  const btnRun = document.getElementById('btnRunPOC5');
+  const selectQuery = document.getElementById('poc5QuerySelect');
+
+  if (btnRun) {
+    btnRun.addEventListener('click', async () => {
+      btnRun.disabled = true;
+      btnRun.innerHTML = `<span class="spinner-border spinner-border-sm" role="status"></span> Retraining & Retrieving...`;
+      showPOC4Toast('Running Two-Tower AI Retrieval Pipeline (12 Epochs)...');
+      try {
+        const resp = await fetch('/api/poc5/run', { method: 'POST' });
+        if (resp.ok) {
+          showPOC4Toast('POC-5 Pipeline executed successfully!');
+          await loadPOC5Data();
+        } else {
+          showPOC4Toast('Failed to run POC-5 pipeline: ' + resp.statusText);
+        }
+      } catch (err) {
+        showPOC4Toast('Network error triggering POC-5: ' + err.message);
+      } finally {
+        btnRun.disabled = false;
+        btnRun.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Run POC-5 Retrieval Pipeline`;
+      }
+    });
+  }
+
+  if (selectQuery) {
+    selectQuery.addEventListener('change', () => {
+      renderPOC5QueryRetrieval(selectQuery.value);
+    });
+  }
+
+  // Initial load
+  loadPOC5Data();
+}
+
+async function loadPOC5Data() {
+  try {
+    const res = await fetch('/api/poc5/results');
+    if (!res.ok) return;
+    poc5Data = await res.json();
+    populatePOC5Metrics(poc5Data);
+    populatePOC5QueryDropdown(poc5Data);
+    populatePOC5Figures(poc5Data);
+  } catch (e) {
+    console.warn('Could not load POC 5 data:', e);
+  }
+}
+
+function populatePOC5Metrics(data) {
+  const s = data.summary || {};
+  const r1El = document.getElementById('poc5Recall1Val');
+  const r5El = document.getElementById('poc5Recall5Val');
+  const r10El = document.getElementById('poc5Recall10Val');
+  const mrrEl = document.getElementById('poc5MRRVal');
+
+  if (r1El && s.recall_at_1 !== undefined) r1El.innerText = `${(s.recall_at_1 * 100).toFixed(1)}%`;
+  if (r5El && s.recall_at_5 !== undefined) r5El.innerText = `${(s.recall_at_5 * 100).toFixed(1)}%`;
+  if (r10El && s.recall_at_10 !== undefined) r10El.innerText = `${(s.recall_at_10 * 100).toFixed(1)}%`;
+  if (mrrEl && s.mean_reciprocal_rank !== undefined) mrrEl.innerText = s.mean_reciprocal_rank.toFixed(3);
+}
+
+function populatePOC5QueryDropdown(data) {
+  const selectQuery = document.getElementById('poc5QuerySelect');
+  if (!selectQuery || !data.queries) return;
+
+  selectQuery.innerHTML = '';
+  data.queries.forEach((q, idx) => {
+    const opt = document.createElement('option');
+    opt.value = q.query_patch_id;
+    opt.innerText = `${q.query_sensor || 'OHRC'} Query #${idx + 1} (${q.query_patch_id}) - True Rank: #${q.true_match_rank || 'N/A'}`;
+    selectQuery.appendChild(opt);
+  });
+
+  if (data.queries.length > 0) {
+    renderPOC5QueryRetrieval(data.queries[0].query_patch_id);
+  }
+}
+
+function renderPOC5QueryRetrieval(queryId) {
+  const container = document.getElementById('poc5RetrievalGrid');
+  if (!container || !poc5Data || !poc5Data.queries) return;
+
+  const qData = poc5Data.queries.find(q => q.query_patch_id === queryId);
+  if (!qData) return;
+
+  container.innerHTML = '';
+
+  // 1. Query Card
+  const qCard = document.createElement('div');
+  qCard.className = 'glassmorphism';
+  qCard.style.cssText = 'min-width: 220px; max-width: 220px; border: 2px solid #1a73e8; border-radius: 8px; padding: 0.8rem; background: rgba(26, 115, 232, 0.08);';
+  qCard.innerHTML = `
+    <div style="font-size: 0.75rem; font-weight: bold; color: #58a6ff; margin-bottom: 0.4rem; text-transform: uppercase;">
+      ★ QUERY FOOTPRINT
+    </div>
+    <div style="font-weight: bold; font-size: 0.9rem; margin-bottom: 0.2rem;">${qData.query_patch_id}</div>
+    <div style="font-size: 0.75rem; color: #8b949e; margin-bottom: 0.5rem;">Sensor: ${qData.query_sensor} | GSD: ${qData.query_gsd_m}m</div>
+    <div style="background: #000; border-radius: 4px; height: 140px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #30363d;">
+      <span style="font-size: 0.8rem; color: #8b949e;">Query Patch [${qData.query_sensor}]</span>
+    </div>
+    <div style="margin-top: 0.6rem; font-size: 0.75rem; color: #c9d1d9;">
+      True Match Rank: <span class="pill-${qData.true_match_rank <= 5 ? 'pass' : 'neutral'}">#${qData.true_match_rank || 'N/A'}</span>
+    </div>
+  `;
+  container.appendChild(qCard);
+
+  // 2. Candidate Cards
+  const candidates = qData.candidates || [];
+  candidates.slice(0, 5).forEach(cand => {
+    const isHit = cand.is_ground_truth;
+    const borderCol = isHit ? '#2ea043' : '#30363d';
+    const bgCol = isHit ? 'rgba(46, 160, 67, 0.12)' : 'rgba(255, 255, 255, 0.02)';
+    
+    const cCard = document.createElement('div');
+    cCard.className = 'glassmorphism';
+    cCard.style.cssText = `min-width: 220px; max-width: 220px; border: 2px solid ${borderCol}; border-radius: 8px; padding: 0.8rem; background: ${bgCol};`;
+    cCard.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.4rem;">
+        <span style="font-size: 0.8rem; font-weight: bold; color: ${isHit ? '#3fb950' : '#8b949e'};">Rank #${cand.rank}</span>
+        <span class="pill-${isHit ? 'winner' : 'neutral'}" style="font-size: 0.65rem;">${isHit ? 'TRUE MATCH' : 'DISTRACTOR'}</span>
+      </div>
+      <div style="font-weight: 500; font-size: 0.85rem; margin-bottom: 0.2rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${cand.candidate_patch_id}</div>
+      <div style="font-size: 0.75rem; color: #8b949e; margin-bottom: 0.5rem;">Dist: ${cand.ground_distance_m}m</div>
+      <div style="background: #000; border-radius: 4px; height: 140px; display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid #30363d;">
+        <span style="font-size: 0.75rem; color: #8b949e;">Candidate [${cand.sensor}]</span>
+      </div>
+      <div style="margin-top: 0.6rem; font-size: 0.75rem; display: flex; justify-content: space-between;">
+        <span style="color: #8b949e;">Cosine Sim:</span>
+        <strong style="color: ${isHit ? '#3fb950' : '#c9d1d9'};">${cand.cosine_similarity.toFixed(4)}</strong>
+      </div>
+    `;
+    container.appendChild(cCard);
+  });
+}
+
+function populatePOC5Figures(data) {
+  const figs = data.figures || {};
+  const map = {
+    poc5FigArch: figs.two_tower_architecture,
+    poc5FigGrid: figs.retrieval_ranking_grid,
+    poc5FigClusters: figs.embedding_clusters,
+    poc5FigRecall: figs.recall_at_k_curve,
+    poc5FigDist: figs.similarity_distribution,
+  };
+
+  const t = Date.now();
+  for (const [id, src] of Object.entries(map)) {
+    const el = document.getElementById(id);
+    if (el && src) {
+      el.src = `${src}?t=${t}`;
     }
   }
 }
+
 

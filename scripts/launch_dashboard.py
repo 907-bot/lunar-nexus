@@ -44,6 +44,22 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
+        # Serve favicon and common browser assets cleanly (suppress 404s)
+        if path in ("/favicon.ico", "/favicon.svg", "/apple-touch-icon.png", "/apple-touch-icon-precomposed.png"):
+            fav_path = WEB_DIR / "favicon.svg"
+            if fav_path.exists():
+                self.serve_file(fav_path, "image/svg+xml")
+            else:
+                self.send_response(204)
+                self.end_headers()
+            return
+
+        # Suppress chrome devtools 404
+        if path.startswith("/.well-known/"):
+            self.send_response(204)
+            self.end_headers()
+            return
+
         # 1. API: Catalog Observations
         if path == "/api/catalog":
             self.send_json_response(self.get_catalog_data())
@@ -125,10 +141,28 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                         "ablation_results": "/outputs/poc4/ablation_results.png",
                     }
                 }
+        # 3d. API: POC 5 Results & Visualizations
+        if path == "/api/poc5/results" or path == "/api/poc5/demo":
+            results_path = PROJECT_ROOT / "outputs" / "poc5" / "results.json"
+            if results_path.exists():
+                with open(results_path, "r", encoding="utf-8") as f:
+                    results_data = json.load(f)
+                resp = {
+                    "summary": results_data.get("summary", {}),
+                    "queries": results_data.get("queries", []),
+                    "figures": {
+                        "two_tower_architecture": "/outputs/poc5/two_tower_architecture.png",
+                        "retrieval_ranking_grid": "/outputs/poc5/retrieval_ranking_grid.png",
+                        "embedding_clusters": "/outputs/poc5/embedding_clusters.png",
+                        "recall_at_k_curve": "/outputs/poc5/recall_at_k_curve.png",
+                        "similarity_distribution": "/outputs/poc5/similarity_distribution.png",
+                    }
+                }
                 self.send_json_response(resp)
             else:
-                self.send_error(404, "POC 4 demo artifacts not generated yet. Run scripts/demo_poc4.py")
+                self.send_error(404, "POC 5 results not found. Run scripts/demo_poc5.py")
             return
+
 
         # 4. Static Frontend Routing
         if path == "/" or path == "/index.html":
@@ -161,16 +195,33 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
             return
 
         if path == "/api/poc4/run":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8") if content_length > 0 else "{}"
             try:
+                payload = json.loads(body) if body else {}
+                seed = int(payload.get("seed", 42))
                 from scripts.demo_poc4 import main as run_demo_main
-                logger.info("Triggering POC-4 Experiment Run via Web API...")
-                run_demo_main()
+                logger.info(f"Triggering POC-4 Experiment Run via Web API (seed={seed})...")
+                run_demo_main(seed=seed)
                 results_path = PROJECT_ROOT / "outputs" / "poc4" / "results.json"
                 with open(results_path, "r", encoding="utf-8") as f:
                     self.send_json_response(json.load(f))
             except Exception as e:
                 logger.error(f"POC-4 execution error: {e}", exc_info=True)
                 self.send_error(500, f"POC-4 run failed: {str(e)}")
+            return
+
+        if path == "/api/poc5/run":
+            try:
+                from scripts.demo_poc5 import main as run_poc5_main
+                logger.info("Triggering POC-5 Experiment Run via Web API...")
+                run_poc5_main()
+                results_path = PROJECT_ROOT / "outputs" / "poc5" / "results.json"
+                with open(results_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            except Exception as e:
+                logger.error(f"POC-5 execution error: {e}", exc_info=True)
+                self.send_error(500, f"POC-5 run failed: {str(e)}")
             return
 
         self.send_error(404, "Endpoint not found")

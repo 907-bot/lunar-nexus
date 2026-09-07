@@ -93,6 +93,38 @@ from .poc4_visualization import (
     generate_ablation_results_figure,
 )
 
+from .poc5_dataset import (
+    LunarPatchSample,
+    PatchPairSample,
+    LunarCorrespondenceDataset,
+    PyTorchLunarPairDataset,
+)
+from .poc5_model import (
+    TwoTowerCorrespondenceModel,
+    VisionTowerEncoder,
+    MetadataConditioningMLP,
+    ConvBlock,
+)
+from .poc5_training import (
+    ContrastiveCosineLoss,
+    POC5TwoTowerTrainer,
+)
+from .poc5_retrieval import (
+    CrossSensorRetrievalEngine,
+    RetrievedCandidate,
+    QueryRetrievalResult,
+)
+from .poc5_metrics import (
+    evaluate_retrieval_performance,
+)
+from .poc5_visualization import (
+    plot_architecture_diagram,
+    plot_retrieval_ranking_grid,
+    plot_embedding_clusters,
+    plot_recall_at_k_curve,
+    plot_similarity_distribution,
+)
+
 __all__ = [
     "SensorType",
     "MissionType",
@@ -158,5 +190,26 @@ __all__ = [
     "generate_metrics_comparison_figure",
     "generate_illumination_scale_heatmap_figure",
     "generate_ablation_results_figure",
+    # POC-5 Multimodal AI Correspondence
+    "LunarPatchSample",
+    "PatchPairSample",
+    "LunarCorrespondenceDataset",
+    "PyTorchLunarPairDataset",
+    "TwoTowerCorrespondenceModel",
+    "VisionTowerEncoder",
+    "MetadataConditioningMLP",
+    "ConvBlock",
+    "ContrastiveCosineLoss",
+    "POC5TwoTowerTrainer",
+    "CrossSensorRetrievalEngine",
+    "RetrievedCandidate",
+    "QueryRetrievalResult",
+    "evaluate_retrieval_performance",
+    "plot_architecture_diagram",
+    "plot_retrieval_ranking_grid",
+    "plot_embedding_clusters",
+    "plot_recall_at_k_curve",
+    "plot_similarity_distribution",
 ]
+
 

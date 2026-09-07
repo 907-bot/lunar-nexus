@@ -1,9 +1,9 @@
 # NEXUS-LUNAR: POC-4 Scientific Demonstration Report
 ## Proof-of-Concept 4: Illumination + Scale Robustness
 
-**Date:** 2026-09-07T14:32:07Z  
-**Git Commit:** `b3cad926e3b45a35a66a09906303723e55108503`  
-**Execution Environment:** win32 (nt) | Python 3.14.0  
+**Date:** 2026-09-07T17:46:04Z  
+**Git Commit:** `d1fb24f6000350a1730adec0f93c917db78ebc85`  
+**Execution Environment:** darwin (posix) | Python 3.9.6  
 **Provenance Classification:** **REAL-GEOGRAPHY / SYNTHETIC-ILLUMINATION EXPERIMENT**  
 
 ---

@@ -428,7 +428,7 @@ class POC4ExperimentRunner:
         mean_rep_scores = {rep: float(np.mean(scores)) for rep, scores in rep_scores.items()}
         best_rep = max(mean_rep_scores.items(), key=lambda x: x[1])[0] if mean_rep_scores else "RAW"
 
-        # 4. Statistical Summary
+        # 4. Statistical Summary & Representation Aggregates
         stat_summary: Dict[str, Any] = {}
         for metric in ["recall_at_1", "recall_at_5", "recall_at_10", "inlier_ratio", "rmse"]:
             vals = [float(r[metric]) for r in matrix_results if r.get(metric) is not None and np.isfinite(r[metric])]
@@ -439,18 +439,50 @@ class POC4ExperimentRunner:
                     "std_dev": round(float(np.std(vals)), 4),
                 }
 
+        rep_summary_metrics: Dict[str, Any] = {}
+        for r_name in ["RAW", "NORMALIZED", "GRADIENT", "MULTI-SCALE", "MULTI-SCALE + ILLUMINATION-AWARE"]:
+            matching = [r for r in matrix_results if r["representation"].upper() == r_name.upper()]
+            if matching:
+                succ_rate = float(np.mean([1.0 if r["alignment_success"] else 0.0 for r in matching]))
+                inlier_r = float(np.mean([r["inlier_ratio"] for r in matching]))
+                valid_rmse = [r["rmse"] for r in matching if np.isfinite(r["rmse"]) and r["rmse"] < 50.0]
+                mean_rmse = float(np.mean(valid_rmse)) if valid_rmse else 999.0
+                valid_r1 = [r["recall_at_1"] for r in matching if r.get("recall_at_1") is not None]
+                mean_r1 = float(np.mean(valid_r1)) if valid_r1 else 0.0
+                rep_summary_metrics[r_name] = {
+                    "success_rate": round(succ_rate, 4),
+                    "mean_inlier_ratio": round(inlier_r, 4),
+                    "mean_rmse": round(mean_rmse, 2),
+                    "mean_recall_1": round(mean_r1, 4),
+                }
+
+        ablation_mapped = []
+        for row in ablation_results:
+            ablation_mapped.append({
+                **row,
+                "config_name": row.get("configuration", ""),
+                "success": row.get("alignment_success", False),
+            })
+
+        summary_dict = {
+            "best_representation": best_rep,
+            "representation_metrics": rep_summary_metrics,
+        }
+
         # 5. Export JSON
         full_json = {
             "experiment_id": metadata.get("experiment_id", f"EXP_POC4_{int(time.time())}"),
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "best_performing_representation": best_rep,
             "representation_ranking": sorted(mean_rep_scores.items(), key=lambda x: x[1], reverse=True),
+            "summary": summary_dict,
             "statistical_summary": stat_summary,
             "statistical_disclaimer": "Single-pair demonstration; statistical generalization is not possible.",
             "sample_counts": metadata.get("sample_counts", {}),
             "data_provenance": metadata.get("data_provenance", {}),
             "matrix_results": matrix_results,
             "ablation_results": ablation_results,
+            "ablation": ablation_mapped,
             "failure_summary": self.failure_tracker.counts,
         }
 

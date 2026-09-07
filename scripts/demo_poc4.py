@@ -47,7 +47,7 @@ from packages.data_pipeline import (
 from packages.data_pipeline.poc4_experiment import get_git_commit_hash
 
 
-def load_or_create_poc2_patches() -> Tuple[np.ndarray, np.ndarray, float, float, Dict[str, Any]]:
+def load_or_create_poc2_patches(seed: int = 42) -> Tuple[np.ndarray, np.ndarray, float, float, Dict[str, Any]]:
     """Loads geographically corresponding patches from POC-2 demo output if available,
     or generates an authentic high-fidelity lunar polar terrain fixture.
     """
@@ -72,7 +72,7 @@ def load_or_create_poc2_patches() -> Tuple[np.ndarray, np.ndarray, float, float,
 
     # High-fidelity synthetic lunar terrain fixture representing common physical lunar ground
     # (Covers 128m x 128m ground area: 512x512 @ 0.25 m/px vs 128x128 @ 1.00 m/px)
-    rng = np.random.default_rng(101)
+    rng = np.random.default_rng(seed)
     h, w = 512, 512
     y, x = np.mgrid[:h, :w]
     base = np.full((h, w), 125.0, dtype=np.float32)
@@ -239,7 +239,7 @@ All generated machine-readable outputs and publication-quality figures:
         f.write(report_content)
 
 
-def main():
+def main(seed: int = 42):
     print("\n" + "=" * 76)
     print(" NEXUS-LUNAR: PROOF-OF-CONCEPT 4 (POC-4)")
     print(" Illumination + Scale Robustness Demonstration")
@@ -249,8 +249,8 @@ def main():
     output_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Load Patches
-    print("\n--- STEP 1: Loading Common Geographic Footprint Patches ---")
-    src_img, ref_img, src_gsd, ref_gsd, meta = load_or_create_poc2_patches()
+    print(f"\n--- STEP 1: Loading Common Geographic Footprint Patches (seed={seed}) ---")
+    src_img, ref_img, src_gsd, ref_gsd, meta = load_or_create_poc2_patches(seed=seed)
     gsd_ratio = calculate_gsd_ratio(src_gsd, ref_gsd)
 
     print(f"  Source Observation:      {meta['source']['id']}")
@@ -281,8 +281,8 @@ def main():
         print(f"  - Scale {lvl.scale_factor:5.3f}x: {lvl.width:4d}x{lvl.height:4d} px | Effective GSD: {lvl.effective_gsd:.2f} m/pixel")
 
     # 4. Experiment Matrix
-    print("\n--- STEP 4: Executing Full POC-4 Experiment Matrix ---")
-    runner = POC4ExperimentRunner(output_dir=output_dir, seed=42)
+    print(f"\n--- STEP 4: Executing Full POC-4 Experiment Matrix (seed={seed}) ---")
+    runner = POC4ExperimentRunner(output_dir=output_dir, seed=seed)
 
     # For geographically corresponding patch fixtures, the ground truth is an identity affine map
     gt_transform = np.eye(3)
@@ -317,7 +317,7 @@ def main():
         "software_version": "1.4.0",
         "python_version": sys.version.split()[0],
         "operating_system": f"{sys.platform} ({os.name})",
-        "random_seed": 42,
+        "random_seed": seed,
         "sample_counts": {
             "number_of_source_patches": 1,
             "number_of_reference_patches": 1,

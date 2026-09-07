@@ -9,6 +9,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <!-- Leaflet CSS for Lunar GIS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body class="nexus-theme">
@@ -40,6 +41,11 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
           POC 4 Robustness Studio
           <span class="badge-pulse" id="poc4Badge">ROBUST</span>
+        </button>
+        <button class="nav-tab" data-tab="tab-poc5" id="tabBtnPOC5">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path></svg>
+          POC 5 AI Studio
+          <span class="badge-pulse" id="poc5Badge">TWO-TOWER</span>
         </button>
         <button class="nav-tab" data-tab="tab-catalog" id="tabBtnCatalog">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
@@ -250,10 +256,49 @@
               </p>
             </div>
             <div class="banner-actions">
+              <button class="btn-secondary btn-reroll-poc4" id="btnRerollPOC4" title="Execute run with a new random seed to generate variation in terrain and illumination">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+                RE-ROLL SEED & RUN
+              </button>
               <button class="btn-primary btn-run-poc4" id="btnRunPOC4Experiment">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                RUN POC-4 EXPERIMENT
+                RUN EXPERIMENT (SEED 42)
               </button>
+            </div>
+          </div>
+
+          <!-- Interactive Condition Filter & Live Run Inspector Bar -->
+          <div class="poc4-filter-bar glassmorphism">
+            <div class="filter-bar-left">
+              <div class="filter-item">
+                <label for="poc4ConditionSelect">Illumination Filter:</label>
+                <select id="poc4ConditionSelect" class="nexus-select">
+                  <option value="ALL">All 8 Illumination Modes (Aggregated)</option>
+                  <option value="NORMAL">Normal Solar Elevation</option>
+                  <option value="DARKENED">Darkened (Low Albedo / Steep Angle)</option>
+                  <option value="BRIGHTENED">Brightened (High Altitude Glare)</option>
+                  <option value="LOW_CONTRAST">Low Contrast (Hazy / Low Dynamic Range)</option>
+                  <option value="HIGH_CONTRAST">High Contrast (Extreme Dynamic Range)</option>
+                  <option value="GAMMA_SHIFT">Gamma Sensor Non-Linearity</option>
+                  <option value="ILLUMINATION_GRADIENT">Illumination Gradient Ramp</option>
+                  <option value="SHADOW_PERTURBATION">Shadow Perturbation (Deep Polar Craters)</option>
+                </select>
+              </div>
+              <div class="filter-item">
+                <label for="poc4ScaleSelect">Scale Disparity:</label>
+                <select id="poc4ScaleSelect" class="nexus-select">
+                  <option value="ALL">All GSD Scales (1.0x, 0.5x, 0.25x)</option>
+                  <option value="1.0">1.0x (Scale Harmonized)</option>
+                  <option value="0.5">0.5x Scale Factor</option>
+                  <option value="0.25">0.25x Scale Factor (4.00x Disparity)</option>
+                </select>
+              </div>
+            </div>
+            <div class="filter-bar-right">
+              <div class="run-status-indicator" id="poc4RunStatusIndicator">
+                <span class="status-dot"></span>
+                <span id="poc4RunStatusText">Loaded cached results</span>
+              </div>
             </div>
           </div>
 
@@ -447,6 +492,130 @@
           </div>
         </div>
       </section>
+      
+      <!-- TAB 5: POC 5 Multimodal AI Correspondence Studio -->
+      <section class="tab-pane" id="tab-poc5">
+        <div class="poc4-workspace">
+          <!-- Top Control Header Banner -->
+          <div class="poc4-top-banner glassmorphism">
+            <div class="banner-left">
+              <div class="banner-title-row">
+                <span class="pulse-dot active"></span>
+                <h2>POC-5: Multimodal AI Correspondence Studio</h2>
+                <span class="provenance-pill" id="poc5ProvenanceLabel">AUTHENTIC LUNAR OBSERVATION / TWO-TOWER PYTORCH MODEL</span>
+              </div>
+              <p class="banner-desc">
+                Cross-sensor lunar terrain correspondence mapping Chandrayaan-2 OHRC ($0.25\text{ m/px}$) & TMC-2 ($5.0\text{ m/px}$) to NASA LROC NAC ($1.0\text{ m/px}$) using 128-D contrastive metric learning with physical metadata conditioning.
+              </p>
+            </div>
+            <div class="banner-actions">
+              <button class="btn-primary-gradient" id="btnRunPOC5">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Run POC-5 Retrieval Pipeline
+              </button>
+            </div>
+          </div>
+
+          <!-- Key Performance Indicator Metric Cards -->
+          <div class="metrics-grid">
+            <div class="metric-card glassmorphism">
+              <span class="metric-label">Recall@1 Accuracy</span>
+              <span class="metric-value" id="poc5Recall1Val">20.0%</span>
+              <span class="metric-subtext">Top-1 Geographic Match</span>
+            </div>
+            <div class="metric-card glassmorphism">
+              <span class="metric-label">Recall@5 Accuracy</span>
+              <span class="metric-value highlight-val" id="poc5Recall5Val">60.0%</span>
+              <span class="metric-subtext">Top-5 Candidate Pool</span>
+            </div>
+            <div class="metric-card glassmorphism">
+              <span class="metric-label">Recall@10 Accuracy</span>
+              <span class="metric-value highlight-val" id="poc5Recall10Val">100.0%</span>
+              <span class="metric-subtext">Comprehensive Candidate Coverage</span>
+            </div>
+            <div class="metric-card glassmorphism">
+              <span class="metric-label">Mean Reciprocal Rank</span>
+              <span class="metric-value" id="poc5MRRVal">0.382</span>
+              <span class="metric-subtext">Target: &ge; 0.350</span>
+            </div>
+            <div class="metric-card glassmorphism">
+              <span class="metric-label">Model Embedding Dim</span>
+              <span class="metric-value" id="poc5DimVal">128-D</span>
+              <span class="metric-subtext">L2 Normalized Latent Sphere</span>
+            </div>
+          </div>
+
+          <!-- Query Selection & Top-5 Candidate Ranking Grid -->
+          <div class="poc4-section glassmorphism" style="margin-top: 1.5rem;">
+            <div class="section-header-flex">
+              <div>
+                <h3>Cross-Sensor 1-to-N Candidate Retrieval Explorer</h3>
+                <p class="subtitle">Select a Chandrayaan-2 query footprint to inspect its Top-5 retrieved LROC NAC candidates and ground-truth validation</p>
+              </div>
+              <div class="poc4-filter-controls">
+                <label for="poc5QuerySelect" class="filter-label">Query Patch:</label>
+                <select id="poc5QuerySelect" class="nexus-select">
+                  <!-- Dynamically populated -->
+                </select>
+              </div>
+            </div>
+
+            <!-- Visual Ranking Grid Row -->
+            <div id="poc5RetrievalGrid" class="poc5-retrieval-container" style="margin-top: 1rem; display: flex; gap: 1rem; overflow-x: auto; padding-bottom: 0.5rem;">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+
+          <!-- Diagnostic Publication Figures Carousel / Grid -->
+          <div class="poc4-figures-grid" style="margin-top: 1.5rem;">
+            <div class="figure-card glassmorphism">
+              <div class="figure-card-header">
+                <h4>1. Two-Tower Neural Metric Architecture</h4>
+                <span class="figure-badge">SCHEMATIC</span>
+              </div>
+              <div class="figure-img-wrapper" id="poc5WrapperArch">
+                <img id="poc5FigArch" src="/outputs/poc5/two_tower_architecture.png" alt="Two Tower Architecture" class="clickable-figure" title="Click to enlarge">
+              </div>
+            </div>
+            <div class="figure-card glassmorphism">
+              <div class="figure-card-header">
+                <h4>2. Cross-Sensor Retrieval Ranking Grid</h4>
+                <span class="figure-badge">TOP-K VALIDATION</span>
+              </div>
+              <div class="figure-img-wrapper" id="poc5WrapperGrid">
+                <img id="poc5FigGrid" src="/outputs/poc5/retrieval_ranking_grid.png" alt="Retrieval Grid" class="clickable-figure" title="Click to enlarge">
+              </div>
+            </div>
+            <div class="figure-card glassmorphism">
+              <div class="figure-card-header">
+                <h4>3. Latent Space Embedding Clusters (PCA)</h4>
+                <span class="figure-badge">128-D PROJECTION</span>
+              </div>
+              <div class="figure-img-wrapper" id="poc5WrapperClusters">
+                <img id="poc5FigClusters" src="/outputs/poc5/embedding_clusters.png" alt="Embedding Clusters" class="clickable-figure" title="Click to enlarge">
+              </div>
+            </div>
+            <div class="figure-card glassmorphism">
+              <div class="figure-card-header">
+                <h4>4. Recall@K Benchmark Curve</h4>
+                <span class="figure-badge">AI VS CLASSICAL</span>
+              </div>
+              <div class="figure-img-wrapper" id="poc5WrapperRecall">
+                <img id="poc5FigRecall" src="/outputs/poc5/recall_at_k_curve.png" alt="Recall at K Curve" class="clickable-figure" title="Click to enlarge">
+              </div>
+            </div>
+            <div class="figure-card glassmorphism">
+              <div class="figure-card-header">
+                <h4>5. Cosine Similarity Distribution</h4>
+                <span class="figure-badge">LATENT SEPARATION</span>
+              </div>
+              <div class="figure-img-wrapper" id="poc5WrapperDist">
+                <img id="poc5FigDist" src="/outputs/poc5/similarity_distribution.png" alt="Similarity Distribution" class="clickable-figure" title="Click to enlarge">
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -513,6 +682,9 @@
       </div>
     </div>
   </div>
+
+  <!-- Notification Toast -->
+  <div id="poc4Toast" class="nexus-toast"></div>
 
   <!-- Leaflet JS for GIS map -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
