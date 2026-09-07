@@ -58,13 +58,21 @@ import os
 
 print("[Blender] Initializing clean scene...")
 bpy.ops.wm.read_factory_settings(use_empty=True)
-
-# 1. Set render engine to Cycles or EEVEE
+# 1. Set render engine
 scene = bpy.context.scene
-scene.render.engine = 'BLENDER_EEVEE_NEXT' if hasattr(bpy.types, 'BLENDER_EEVEE_NEXT') else 'BLENDER_EEVEE'
+scene.render.engine = 'BLENDER_EEVEE'
 scene.render.resolution_x = 1280
 scene.render.resolution_y = 720
 scene.render.resolution_percentage = 100
+
+# Ambient World Fill Light (deep space with subtle starlight bounce)
+world = bpy.data.worlds.new('LunarSpaceWorld')
+scene.world = world
+world.use_nodes = True
+bg = world.node_tree.nodes.get('Background')
+if bg:
+    bg.inputs['Color'].default_value = (0.05, 0.05, 0.07, 1.0)
+    bg.inputs['Strength'].default_value = 0.8
 
 # 2. Import 3D OBJ Terrain
 obj_path = r"{str(obj_path)}"
@@ -76,32 +84,30 @@ else:
 
 terrain_obj = bpy.context.selected_objects[0]
 terrain_obj.name = "Lunar_Terrain_DEM"
+# Align terrain vertically so surface is at Z ~ 0
+terrain_obj.location = (0, 0, 1000.0)
 
 # Create Regolith PBR Material
 mat_terrain = bpy.data.materials.new(name="Lunar_Regolith_PBR")
 mat_terrain.use_nodes = True
-nodes = mat_terrain.node_tree.nodes
-bsdf = nodes.get("Principled BSDF")
+bsdf = mat_terrain.node_tree.nodes.get("Principled BSDF")
 if bsdf:
-    # Lunar regolith dark gray color (~0.12 reflectance)
-    bsdf.inputs["Base Color"].default_value = (0.14, 0.14, 0.15, 1.0)
-    bsdf.inputs["Roughness"].default_value = 0.95
+    bsdf.inputs["Base Color"].default_value = (0.35, 0.35, 0.38, 1.0)
+    bsdf.inputs["Roughness"].default_value = 0.85
 terrain_obj.data.materials.append(mat_terrain)
 
-# 3. Setup Physical Polar Sun Lighting
-sun_data = bpy.data.lights.new(name="Lunar_Polar_Sun", type='SUN')
-sun_data.energy = 5.0
-sun_data.angle = math.radians(0.53)  # Sun angular diameter
-sun_obj = bpy.data.objects.new(name="Lunar_Polar_Sun", object_data=sun_data)
+# 3. Setup Sun Lighting (directional sun casting clear crater & module shadows)
+sun_data = bpy.data.lights.new(name="Lunar_Sun", type='SUN')
+sun_data.energy = 6.0
+sun_data.angle = math.radians(1.0)
+sun_obj = bpy.data.objects.new(name="Lunar_Sun", object_data=sun_data)
+sun_obj.rotation_euler = (math.radians(35.0), math.radians(15.0), math.radians(45.0))
 bpy.context.collection.objects.link(sun_obj)
-
-# Polar sun: elevation 3.5 deg, azimuth 124.5 deg
-elev_rad = math.radians(3.5)
-az_rad = math.radians(124.5)
-sun_obj.rotation_euler = (math.pi/2 - elev_rad, 0, az_rad)
 
 # 4. Load Habitat Components
 layout_path = r"{str(layout_path)}"
+hab_core_obj = None
+
 if os.path.exists(layout_path):
     with open(layout_path, "r") as f:
         plan = json.load(f)
@@ -109,49 +115,58 @@ if os.path.exists(layout_path):
     for mod in plan.get("modules", []):
         m_type = mod.get("type")
         pos = mod.get("position_m", {{}})
-        x, y, z = pos.get("x", 0.0), pos.get("y", 0.0), pos.get("z", 0.0)
+        x, y = pos.get("x", 0.0), pos.get("y", 0.0)
+        # Since terrain was shifted +1000m, module Z is offset
+        z = pos.get("z", 0.0) + 1000.0
 
         if m_type == "HABITAT_CORE":
-            # White geodesic pressurized dome
-            bpy.ops.mesh.primitive_uv_sphere_add(radius=14.0, location=(x, y, z + 7.0))
+            # White geodesic pressurized living dome
+            bpy.ops.mesh.primitive_uv_sphere_add(radius=22.0, location=(x, y, z + 12.0))
             dome = bpy.context.active_object
             dome.name = "Habitat_Core_Dome"
             mat_dome = bpy.data.materials.new(name="Hab_Dome_Mat")
             mat_dome.use_nodes = True
             d_bsdf = mat_dome.node_tree.nodes.get("Principled BSDF")
             if d_bsdf:
-                d_bsdf.inputs["Base Color"].default_value = (0.85, 0.88, 0.90, 1.0)
-                d_bsdf.inputs["Roughness"].default_value = 0.25
+                d_bsdf.inputs["Base Color"].default_value = (0.92, 0.94, 0.98, 1.0)
+                d_bsdf.inputs["Roughness"].default_value = 0.2
             dome.data.materials.append(mat_dome)
+            hab_core_obj = dome
 
         elif m_type == "SOLAR_FARM":
-            # Solar panel array towers
-            bpy.ops.mesh.primitive_cube_add(size=30.0, location=(x, y, z + 15.0))
+            # Bifacial solar panel field
+            bpy.ops.mesh.primitive_cube_add(size=40.0, location=(x, y, z + 20.0))
             solar = bpy.context.active_object
             solar.name = "Solar_Array_Field"
             mat_sol = bpy.data.materials.new(name="Solar_Cell_Mat")
             mat_sol.use_nodes = True
             s_bsdf = mat_sol.node_tree.nodes.get("Principled BSDF")
             if s_bsdf:
-                s_bsdf.inputs["Base Color"].default_value = (0.02, 0.05, 0.15, 1.0)
+                s_bsdf.inputs["Base Color"].default_value = (0.02, 0.08, 0.25, 1.0)
                 s_bsdf.inputs["Roughness"].default_value = 0.1
             solar.data.materials.append(mat_sol)
 
         elif m_type == "LANDING_PAD":
-            # Flat circular touchdown pad
-            bpy.ops.mesh.primitive_cylinder_add(radius=28.0, depth=2.0, location=(x, y, z + 1.0))
+            # Sintered regolith touchdown pad
+            bpy.ops.mesh.primitive_cylinder_add(radius=50.0, depth=4.0, location=(x, y, z + 2.0))
             pad = bpy.context.active_object
             pad.name = "Landing_Pad_Depot"
 
-# 5. Position High-Angle Orbital Camera
-cam_data = bpy.data.cameras.new(name="Digital_Twin_Orbital_Camera")
-cam_obj = bpy.data.objects.new(name="Digital_Twin_Orbital_Camera", object_data=cam_data)
+# 5. Position High-Angle Orbital Camera with Track-To Constraint
+cam_data = bpy.data.cameras.new("Digital_Twin_Orbital_Camera")
+cam_data.lens = 32
+cam_data.clip_end = 10000.0
+cam_obj = bpy.data.objects.new("Digital_Twin_Orbital_Camera", object_data=cam_data)
+cam_obj.location = (50.0, -100.0, 550.0)
 bpy.context.collection.objects.link(cam_obj)
 scene.camera = cam_obj
 
-# Camera looking down at habitat complex from elevated perspective
-cam_obj.location = (200.0, -200.0, -700.0)
-cam_obj.rotation_euler = (math.radians(65.0), 0, math.radians(45.0))
+# Track directly to Habitat Core
+if hab_core_obj:
+    tt = cam_obj.constraints.new(type='TRACK_TO')
+    tt.target = hab_core_obj
+    tt.track_axis = 'TRACK_NEGATIVE_Z'
+    tt.up_axis = 'UP_Y'
 
 # 6. Render Output
 output_img = r"{str(output_img)}"
