@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initLightbox();
   initPOC4Studio();
   initPOC5Studio();
+  initPOC6Studio();
   await loadCatalogAndPairs();
 });
 
@@ -1069,5 +1070,300 @@ function updatePOC5UI(data) {
     }
   }
 }
+
+// ==========================================================================
+// POC 6: Geometric Verification + Explainable AI (XAI) Studio
+// ==========================================================================
+let poc6Data = null;
+let poc6SelectedIndex = 0;
+
+function initPOC6Studio() {
+  const btnRun = document.getElementById('btnRunPOC6');
+  if (btnRun) {
+    btnRun.addEventListener('click', runPOC6FullPipeline);
+  }
+  loadPOC6Results();
+}
+
+async function loadPOC6Results() {
+  try {
+    const res = await fetch('/api/poc6/demo');
+    if (res.ok) {
+      const data = await res.json();
+      poc6Data = data;
+      updatePOC6UI(data);
+    }
+  } catch (e) {
+    console.log('POC-6 demo data not yet loaded.');
+  }
+}
+
+async function runPOC6FullPipeline() {
+  const btnRun = document.getElementById('btnRunPOC6');
+  const progressCard = document.getElementById('poc6ProgressCard');
+  const progressBar = document.getElementById('poc6ProgressBarFill');
+  const progressPct = document.getElementById('poc6ProgressPct');
+  const stageSpans = document.querySelectorAll('#poc6ProgressStages .stage-item');
+
+  btnRun.disabled = true;
+  btnRun.innerHTML = `
+    <span class="spinner" style="width: 14px; height: 14px; border-width: 2px; display: inline-block;"></span>
+    Verifying Geometry & Generating XAI...
+  `;
+  progressCard.style.display = 'flex';
+
+  const stages = [
+    { pct: 10, idx: 0 },
+    { pct: 22, idx: 1 },
+    { pct: 35, idx: 2 },
+    { pct: 48, idx: 3 },
+    { pct: 60, idx: 4 },
+    { pct: 72, idx: 5 },
+    { pct: 83, idx: 6 },
+    { pct: 92, idx: 7 },
+    { pct: 100, idx: 8 },
+  ];
+
+  let curStage = 0;
+  const timer = setInterval(() => {
+    if (curStage < stages.length) {
+      const s = stages[curStage];
+      progressBar.style.width = `${s.pct}%`;
+      progressPct.innerText = `${s.pct}%`;
+      stageSpans.forEach((el, i) => {
+        if (i < s.idx) {
+          el.className = 'stage-item completed';
+        } else if (i === s.idx) {
+          el.className = 'stage-item active';
+        } else {
+          el.className = 'stage-item';
+        }
+      });
+      curStage++;
+    }
+  }, 350);
+
+  try {
+    const res = await fetch('/api/poc6/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    clearInterval(timer);
+
+    if (res.ok) {
+      progressBar.style.width = '100%';
+      progressPct.innerText = '100%';
+      stageSpans.forEach(el => el.className = 'stage-item completed');
+      
+      setTimeout(async () => {
+        progressCard.style.display = 'none';
+        await loadPOC6Results();
+        refreshPOC6FigureImages();
+      }, 600);
+    } else {
+      const err = await res.text();
+      alert('POC-6 verification error: ' + err);
+    }
+  } catch (err) {
+    clearInterval(timer);
+    console.error('POC-6 execution failure:', err);
+    alert('Failed to execute POC-6 verification: ' + err);
+  } finally {
+    btnRun.disabled = false;
+    btnRun.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      RUN POC-6 VERIFICATION
+    `;
+  }
+}
+
+function refreshPOC6FigureImages() {
+  const t = Date.now();
+  document.querySelectorAll('#tab-poc6 .gallery-img-box img, #poc6VisualPreviewImg').forEach(img => {
+    const base = img.src.split('?')[0];
+    img.src = `${base}?t=${t}`;
+  });
+}
+
+function updatePOC6UI(data) {
+  if (!data) return;
+  poc6Data = data;
+
+  // Provenance
+  if (data.metadata && data.metadata.provenance) {
+    const provLabel = document.getElementById('poc6ProvLabel');
+    if (provLabel) provLabel.innerText = data.metadata.provenance;
+  }
+
+  // Count badges
+  const totalBadge = document.getElementById('poc6TotalCountBadge');
+  if (totalBadge) totalBadge.innerText = `${data.total_candidates} Candidates Evaluated`;
+
+  const accBadge = document.getElementById('poc6AcceptedCountBadge');
+  if (accBadge) accBadge.innerText = `${data.accepted_count} Accepted`;
+
+  const rejBadge = document.getElementById('poc6RejectedCountBadge');
+  if (rejBadge) rejBadge.innerText = `${data.rejected_count} Rejected`;
+
+  const failBadge = document.getElementById('poc6FailureCountBadge');
+  if (failBadge) failBadge.innerText = `${data.rejected_count} Rejected Candidates`;
+
+  const poc7Count = document.getElementById('poc7VerifiedPairsCount');
+  if (poc7Count) poc7Count.innerText = `${data.accepted_count} pairs`;
+
+  // Populate candidate selector chips
+  const carousel = document.getElementById('poc6CandidateCarousel');
+  if (carousel && data.candidates && data.candidates.length > 0) {
+    carousel.innerHTML = '';
+    data.candidates.slice(0, 15).forEach((cand, idx) => {
+      const chip = document.createElement('button');
+      chip.className = `btn-secondary ${idx === poc6SelectedIndex ? 'active-chip' : ''}`;
+      chip.style.cssText = `padding: 6px 12px; font-size: 0.78rem; white-space: nowrap; border-radius: 6px; display: flex; align-items: center; gap: 6px; cursor: pointer; border: 1px solid ${cand.accepted ? '#00e676' : '#ff1744'}; background: ${idx === poc6SelectedIndex ? (cand.accepted ? 'rgba(0, 230, 118, 0.25)' : 'rgba(255, 23, 68, 0.25)') : 'rgba(15, 23, 42, 0.7)'}; color: #fff;`;
+      
+      const badgeIcon = cand.accepted ? '✓' : '✗';
+      const badgeColor = cand.accepted ? '#00e676' : '#ff1744';
+
+      chip.innerHTML = `
+        <span style="color: ${badgeColor}; font-weight: bold;">${badgeIcon} #${cand.rank}</span>
+        <span>${cand.query_patch_id.slice(-4)} vs ${cand.candidate_patch_id.slice(-4)}</span>
+        <span style="font-size: 0.7rem; opacity: 0.8;">(${(cand.ai_similarity_score * 100).toFixed(0)}% AI)</span>
+      `;
+      chip.addEventListener('click', () => {
+        poc6SelectedIndex = idx;
+        document.querySelectorAll('#poc6CandidateCarousel button').forEach((b, bi) => {
+          const c = data.candidates[bi];
+          b.style.background = (bi === idx) ? (c.accepted ? 'rgba(0, 230, 118, 0.25)' : 'rgba(255, 23, 68, 0.25)') : 'rgba(15, 23, 42, 0.7)';
+        });
+        selectPOC6Candidate(cand);
+      });
+      carousel.appendChild(chip);
+    });
+
+    selectPOC6Candidate(data.candidates[poc6SelectedIndex]);
+  }
+
+  // Populate failure table
+  if (data.failure_cases && data.failure_cases.failure_code_counts) {
+    const tbody = document.getElementById('poc6FailureTableBody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      const counts = data.failure_cases.failure_code_counts;
+      const codeDescriptions = {
+        'GEOGRAPHIC_DISJOINT': 'Candidate coordinates outside physical query footprint',
+        'TOO_FEW_INLIERS': 'Insufficient geometric consensus (< 6 inliers)',
+        'LOW_INLIER_RATIO': 'Inlier percentage below threshold (< 35%)',
+        'AI_SIMILARITY_FALSE_POSITIVE': 'High AI similarity (>0.75) unsupported by geometry',
+        'POOR_SPATIAL_DISTRIBUTION': 'Keypoints clustered in single corner/crater rim',
+        'HIGH_REPROJECTION_ERROR': 'Reprojection error exceeds allowable tolerance (> 3.5 px)',
+        'UNSTABLE_TRANSFORMATION': 'Estimated affine transformation is degenerate or distorted',
+        'NO_VALID_GEOMETRIC_MODEL': 'RANSAC failed to estimate consensus affine model',
+        'LOW_CONFIDENCE': 'Composite confidence fell below minimum threshold (0.50)',
+      };
+
+      for (const [code, count] of Object.entries(counts)) {
+        const desc = codeDescriptions[code] || 'Geometric verification criteria not met';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><span class="val-code">${code}</span></td>
+          <td>${desc}</td>
+          <td><strong>${count}</strong></td>
+          <td><span class="pill-neutral">${code === 'GEOGRAPHIC_DISJOINT' ? 'Auto-Reject' : 'Reject'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+  }
+}
+
+function selectPOC6Candidate(cand) {
+  if (!cand) return;
+
+  // Title and subtitle
+  const title = document.getElementById('poc6SelectedPairTitle');
+  if (title) title.innerText = `Pair Inspection: ${cand.query_patch_id} vs ${cand.candidate_patch_id}`;
+
+  const sub = document.getElementById('poc6SelectedPairSub');
+  if (sub) sub.innerText = `Retrieval Rank #${cand.rank} | AI Similarity: ${(cand.ai_similarity_score * 100).toFixed(1)}% | Sensor Disparity: ${cand.query_sensor} (${cand.query_gsd}m) to ${cand.candidate_sensor} (${cand.candidate_gsd}m)`;
+
+  // Decision Badge
+  const badgeContainer = document.getElementById('poc6DecisionBadgeContainer');
+  if (badgeContainer) {
+    if (cand.accepted) {
+      badgeContainer.innerHTML = `<span class="tag-pill tag-green" style="font-size: 0.95rem; font-weight: bold; padding: 6px 14px; background: rgba(0, 230, 118, 0.2); border: 1px solid #00e676; color: #00e676;">✓ ACCEPTED</span>`;
+    } else {
+      badgeContainer.innerHTML = `<span class="tag-pill tag-red" style="font-size: 0.95rem; font-weight: bold; padding: 6px 14px; background: rgba(255, 23, 68, 0.2); border: 1px solid #ff1744; color: #ff1744;">✗ REJECTED</span>`;
+    }
+  }
+
+  // Metrics grid
+  const elTent = document.getElementById('poc6MetricTentative');
+  if (elTent) elTent.innerText = cand.tentative_match_count;
+
+  const elInl = document.getElementById('poc6MetricInliers');
+  if (elInl) elInl.innerText = cand.inlier_count;
+
+  const elRatio = document.getElementById('poc6MetricInlierRatio');
+  if (elRatio) elRatio.innerText = `${(cand.inlier_ratio * 100).toFixed(1)}%`;
+
+  const elRMSE = document.getElementById('poc6MetricRMSE');
+  if (elRMSE) elRMSE.innerText = cand.rmse >= 900 ? 'N/A' : `${cand.rmse.toFixed(2)} px`;
+
+  const elSpatial = document.getElementById('poc6MetricSpatial');
+  if (elSpatial) elSpatial.innerText = `${cand.spatial_distribution_status} (${cand.spatial_distribution_score.toFixed(2)})`;
+
+  const elStab = document.getElementById('poc6MetricStability');
+  if (elStab) elStab.innerText = cand.transformation_stability;
+
+  // Confidence score
+  const confDisp = document.getElementById('poc6ConfidenceScoreDisplay');
+  if (confDisp) confDisp.innerText = `${(cand.verification_confidence * 100).toFixed(1)}%`;
+
+  // WHY? box
+  const whyTitle = document.getElementById('poc6WhyTitle');
+  const whyList = document.getElementById('poc6WhyList');
+  if (whyTitle && whyList) {
+    if (cand.accepted) {
+      whyTitle.innerText = 'WHY WAS THIS MATCH ACCEPTED?';
+      whyTitle.style.color = '#38bdf8';
+      whyList.innerHTML = cand.acceptance_reasons.map(r => `
+        <li style="display: flex; align-items: flex-start; gap: 6px;">
+          <span style="color: #00e676; font-weight: bold;">✓</span>
+          <span>${r}</span>
+        </li>
+      `).join('');
+    } else {
+      whyTitle.innerText = 'WHY WAS THIS MATCH REJECTED?';
+      whyTitle.style.color = '#f43f5e';
+      whyList.innerHTML = cand.rejection_reasons.map(r => `
+        <li style="background: rgba(239, 68, 68, 0.12); border-left: 3px solid #ef4444; padding: 6px 10px; border-radius: 4px; margin-bottom: 2px;">
+          <strong style="color: #fca5a5;">[${r.code}]</strong>: <span>${r.message}</span>
+        </li>
+      `).join('');
+    }
+  }
+
+  // 8 Progress Bars & Values
+  const cb = cand.confidence_breakdown;
+  if (cb) {
+    setBar('poc6BarAI', 'poc6BarValAI', cb.ai_match_score);
+    setBar('poc6BarInliers', 'poc6BarValInliers', cb.inlier_score);
+    setBar('poc6BarRatio', 'poc6BarValRatio', cb.inlier_ratio_score);
+    setBar('poc6BarRMSE', 'poc6BarValRMSE', cb.rmse_score);
+    setBar('poc6BarGeo', 'poc6BarValGeo', cb.geographic_overlap_score);
+    setBar('poc6BarSpatial', 'poc6BarValSpatial', cb.spatial_distribution_score);
+    setBar('poc6BarStab', 'poc6BarValStab', cb.transformation_stability_score);
+    setBar('poc6BarSensor', 'poc6BarValSensor', cb.sensor_compatibility_score);
+  }
+}
+
+function setBar(barId, valId, score) {
+  const bar = document.getElementById(barId);
+  const val = document.getElementById(valId);
+  const pct = Math.max(0, Math.min(100, (score || 0) * 100));
+  if (bar) bar.style.width = `${pct.toFixed(0)}%`;
+  if (val) val.innerText = `${pct.toFixed(1)}%`;
+}
+
 
 

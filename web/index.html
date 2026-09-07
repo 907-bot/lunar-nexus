@@ -46,6 +46,11 @@
           POC 5 Multimodal Studio
           <span class="badge-pulse" id="poc5Badge" style="background: linear-gradient(135deg, #a29bfe, #6c5ce7);">AI RETRIEVAL</span>
         </button>
+        <button class="nav-tab" data-tab="tab-poc6" id="tabBtnPOC6">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+          POC 6 Geometric XAI
+          <span class="badge-pulse" id="poc6Badge" style="background: linear-gradient(135deg, #00f2fe, #4facfe);">GEOMETRIC XAI</span>
+        </button>
         <button class="nav-tab" data-tab="tab-catalog" id="tabBtnCatalog">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
           Catalog Index
@@ -711,13 +716,297 @@
                 <p class="footnote" style="margin-top: 8px;">
                   <strong>Scientific Workflow:</strong> POC-5 provides Top-K candidate correspondence ranking based on multimodal representation similarity. POC-6 performs rigid geometric affine/homography verification on these candidates.
                 </p>
+      </section>
+
+      <!-- TAB 5: POC 6 Geometric Verification & XAI Studio -->
+      <section class="tab-pane" id="tab-poc6">
+        <div class="poc4-workspace">
+          <!-- Scientific Provenance Banner -->
+          <div class="provenance-banner glassmorphism" id="poc6ProvenanceBanner" style="border-left: 4px solid #00f2fe;">
+            <div class="prov-badge" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; font-weight: bold;">
+              POC-6 GEOMETRIC XAI
+            </div>
+            <div class="prov-info">
+              <strong id="poc6ProvLabel">REAL-GEOGRAPHY / SYNTHETIC-MODALITY EXPERIMENT</strong>
+              <p>Rigid geometric verification using RANSAC affine estimation, inlier consensus, spatial spread analysis, and Explainable AI (XAI) diagnostics. Enforces: <em>"AI similarity is candidate evidence, not proof."</em></p>
+            </div>
+            <div class="prov-actions">
+              <button class="btn-run-poc" id="btnRunPOC6" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                RUN POC-6 VERIFICATION
+              </button>
+            </div>
+          </div>
+
+          <!-- Live Step Progress Tracker -->
+          <div class="experiment-progress-card glassmorphism" id="poc6ProgressCard" style="display: none;">
+            <div class="progress-header">
+              <span class="progress-title">Geometric Verification Execution Pipeline</span>
+              <span class="progress-percent" id="poc6ProgressPct">0%</span>
+            </div>
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="poc6ProgressBarFill" style="background: linear-gradient(90deg, #00f2fe, #4facfe); width: 0%;"></div>
+            </div>
+            <div class="progress-stages" id="poc6ProgressStages">
+              <span class="stage-item active">1. Loading Candidates</span>
+              <span class="stage-item">2. Patch Rasters</span>
+              <span class="stage-item">3. Feature Extract</span>
+              <span class="stage-item">4. Lowe Matching</span>
+              <span class="stage-item">5. RANSAC Affine</span>
+              <span class="stage-item">6. Inlier Metrics</span>
+              <span class="stage-item">7. Confidence Score</span>
+              <span class="stage-item">8. XAI Diagnostics</span>
+              <span class="stage-item">9. Export Visuals</span>
+            </div>
+          </div>
+
+          <!-- Top-K Candidate Navigator Carousel -->
+          <div class="poc5-section-card glassmorphism" style="margin-bottom: 20px;">
+            <div class="section-header-row">
+              <div>
+                <h3>POC-5 Candidate Correspondence Inspector</h3>
+                <p class="subtitle">Select a candidate retrieval pair to inspect physical geometric verification & XAI diagnosis</p>
+              </div>
+              <div style="display: flex; gap: 8px; align-items: center;">
+                <span class="tag-pill" id="poc6TotalCountBadge">55 Candidates Evaluated</span>
+                <span class="tag-pill tag-green" id="poc6AcceptedCountBadge">3 Accepted</span>
+                <span class="tag-pill tag-red" id="poc6RejectedCountBadge">52 Rejected</span>
+              </div>
+            </div>
+            <div class="carousel-selector-row" id="poc6CandidateCarousel" style="display: flex; gap: 8px; overflow-x: auto; padding: 10px 0;">
+              <!-- Dynamically populated candidate chips -->
+            </div>
+          </div>
+
+          <!-- Row 1: Active Candidate Geometric Verification & XAI Studio -->
+          <div class="poc4-tables-row" style="margin-bottom: 20px;">
+            <!-- Left: Candidate Details & Inlier Metrics -->
+            <div class="poc4-table-card glassmorphism" style="flex: 1.1;">
+              <div class="table-card-header">
+                <div>
+                  <h3 id="poc6SelectedPairTitle">Pair Inspection: OHRC_PATCH_0001 vs LROC_PATCH_0001</h3>
+                  <p class="subtitle" id="poc6SelectedPairSub">Retrieval Rank #5 | AI Similarity: 86.0%</p>
+                </div>
+                <div id="poc6DecisionBadgeContainer">
+                  <span class="tag-pill tag-green" style="font-size: 0.95rem; font-weight: bold; padding: 6px 14px;" id="poc6DecisionBadge">✓ ACCEPTED</span>
+                </div>
+              </div>
+
+              <div style="padding: 16px;">
+                <!-- Side-by-side patch representation or visualization -->
+                <div style="text-align: center; margin-bottom: 16px; background: #0b0f19; border-radius: 8px; padding: 10px; border: 1px solid #1f293d;">
+                  <img id="poc6VisualPreviewImg" src="/outputs/poc6/geometric_verification_gallery.png" alt="Inlier Lines Preview" style="max-width: 100%; border-radius: 6px; cursor: pointer;" class="img-preview-trigger" data-title="Geometric Verification Correspondences">
+                  <div style="font-size: 0.75rem; color: #94a3b8; margin-top: 6px;">Query (Left) vs Candidate (Right) with RANSAC inlier correspondences (cyan lines)</div>
+                </div>
+
+                <!-- Metrics Grid -->
+                <div class="metrics-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+                  <div class="metric-box glassmorphism" style="padding: 10px; text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8;">Tentative Matches</div>
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #60a5fa;" id="poc6MetricTentative">12</div>
+                  </div>
+                  <div class="metric-box glassmorphism" style="padding: 10px; text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8;">RANSAC Inliers</div>
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #34d399;" id="poc6MetricInliers">12</div>
+                  </div>
+                  <div class="metric-box glassmorphism" style="padding: 10px; text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8;">Inlier Ratio</div>
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #f59e0b;" id="poc6MetricInlierRatio">100.0%</div>
+                  </div>
+                  <div class="metric-box glassmorphism" style="padding: 10px; text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8;">Reprojection RMSE</div>
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #a78bfa;" id="poc6MetricRMSE">0.00 px</div>
+                  </div>
+                  <div class="metric-box glassmorphism" style="padding: 10px; text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8;">Spatial Spread</div>
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #38bdf8;" id="poc6MetricSpatial">GOOD (1.00)</div>
+                  </div>
+                  <div class="metric-box glassmorphism" style="padding: 10px; text-align: center;">
+                    <div style="font-size: 0.75rem; color: #94a3b8;">Transformation</div>
+                    <div style="font-size: 1.3rem; font-weight: bold; color: #4ade80;" id="poc6MetricStability">STABLE</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: Explainable AI & Multi-Signal Confidence Breakdown -->
+            <div class="poc4-table-card glassmorphism" style="flex: 1.1;">
+              <div class="table-card-header">
+                <div>
+                  <h3>Explainable AI (XAI) Diagnostic Explanation</h3>
+                  <p class="subtitle" id="poc6XaiHeaderSub">Physical evidence and decision reasoning</p>
+                </div>
+                <div style="text-align: right;">
+                  <div style="font-size: 0.75rem; color: #94a3b8;">Verification Confidence</div>
+                  <div style="font-size: 1.3rem; font-weight: bold; color: #00f2fe;" id="poc6ConfidenceScoreDisplay">94.6%</div>
+                </div>
+              </div>
+
+              <div style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+                <!-- WHY? Explanation Box -->
+                <div id="poc6WhyBox" style="background: rgba(15, 23, 42, 0.6); border: 1px solid #334155; border-radius: 8px; padding: 14px;">
+                  <h4 id="poc6WhyTitle" style="color: #38bdf8; margin-bottom: 8px; font-size: 0.95rem;">WHY WAS THIS MATCH ACCEPTED?</h4>
+                  <ul id="poc6WhyList" style="list-style: none; padding-left: 0; margin: 0; display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; color: #e2e8f0;">
+                    <!-- Dynamically populated reasons -->
+                  </ul>
+                </div>
+
+                <!-- 8-Signal Transparent Confidence Breakdown -->
+                <div>
+                  <h4 style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Multi-Signal Confidence Breakdown</h4>
+                  <div style="display: flex; flex-direction: column; gap: 8px; font-size: 0.8rem;">
+                    <div>
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>AI Retrieval Match (Weight: 10%)</span>
+                        <strong id="poc6BarValAI">86.0%</strong>
+                      </div>
+                      <div class="cand-sim-bar-track" style="height: 6px;"><div class="cand-sim-bar-fill" id="poc6BarAI" style="width: 86%; background: #3b82f6;"></div></div>
+                    </div>
+                    <div>
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>Geometric Inlier Count (Weight: 20%)</span>
+                        <strong id="poc6BarValInliers">80.0%</strong>
+                      </div>
+                      <div class="cand-sim-bar-track" style="height: 6px;"><div class="cand-sim-bar-fill" id="poc6BarInliers" style="width: 80%; background: #10b981;"></div></div>
+                    </div>
+                    <div>
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>Inlier Ratio Consistency (Weight: 20%)</span>
+                        <strong id="poc6BarValRatio">100.0%</strong>
+                      </div>
+                      <div class="cand-sim-bar-track" style="height: 6px;"><div class="cand-sim-bar-fill" id="poc6BarRatio" style="width: 100%; background: #06b6d4;"></div></div>
+                    </div>
+                    <div>
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>Reprojection Accuracy / RMSE (Weight: 15%)</span>
+                        <strong id="poc6BarValRMSE">100.0%</strong>
+                      </div>
+                      <div class="cand-sim-bar-track" style="height: 6px;"><div class="cand-sim-bar-fill" id="poc6BarRMSE" style="width: 100%; background: #8b5cf6;"></div></div>
+                    </div>
+                    <div>
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>Geographic Footprint Overlap (Weight: 15%)</span>
+                        <strong id="poc6BarValGeo">100.0%</strong>
+                      </div>
+                      <div class="cand-sim-bar-track" style="height: 6px;"><div class="cand-sim-bar-fill" id="poc6BarGeo" style="width: 100%; background: #f59e0b;"></div></div>
+                    </div>
+                    <div>
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>Spatial Inlier Distribution (Weight: 10%)</span>
+                        <strong id="poc6BarValSpatial">100.0%</strong>
+                      </div>
+                      <div class="cand-sim-bar-track" style="height: 6px;"><div class="cand-sim-bar-fill" id="poc6BarSpatial" style="width: 100%; background: #ec4899;"></div></div>
+                    </div>
+                    <div>
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>Transformation Stability (Weight: 5%)</span>
+                        <strong id="poc6BarValStab">100.0%</strong>
+                      </div>
+                      <div class="cand-sim-bar-track" style="height: 6px;"><div class="cand-sim-bar-fill" id="poc6BarStab" style="width: 100%; background: #6366f1;"></div></div>
+                    </div>
+                    <div>
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 2px;">
+                        <span>Sensor Compatibility (Weight: 5%)</span>
+                        <strong id="poc6BarValSensor">100.0%</strong>
+                      </div>
+                      <div class="cand-sim-bar-track" style="height: 6px;"><div class="cand-sim-bar-fill" id="poc6BarSensor" style="width: 100%; background: #14b8a6;"></div></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 2: Visual Representations Gallery -->
+          <div class="poc5-section-card glassmorphism" style="margin-bottom: 20px;">
+            <div class="section-header-row">
+              <div>
+                <h3>POC-6 Publication Figures & Diagnostic Visualizations</h3>
+                <p class="subtitle">Generated figures illustrating verification, confidence separation, and failure taxonomy</p>
+              </div>
+            </div>
+            <div class="rep-gallery-grid">
+              <div class="gallery-item">
+                <div class="gallery-title">A. Geometric Verification Gallery</div>
+                <div class="gallery-img-box"><img src="/outputs/poc6/geometric_verification_gallery.png" alt="Gallery" class="img-preview-trigger" data-title="Figure 1: Geometric Verification Gallery"></div>
+                <div class="gallery-sub">Tentative vs inlier correspondence lines</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">B. Inlier Ratio vs Confidence</div>
+                <div class="gallery-img-box"><img src="/outputs/poc6/inlier_ratio_vs_confidence.png" alt="Scatter" class="img-preview-trigger" data-title="Figure 2: Inlier Ratio vs Confidence"></div>
+                <div class="gallery-sub">Acceptance decision boundary separation</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">C. Spatial Distribution & Grid Spread</div>
+                <div class="gallery-img-box"><img src="/outputs/poc6/spatial_distribution_inliers.png" alt="Spatial" class="img-preview-trigger" data-title="Figure 3: Spatial Distribution of Inliers"></div>
+                <div class="gallery-sub">4x4 grid cell occupancy evaluation</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">D. Confidence Score Breakdown</div>
+                <div class="gallery-img-box"><img src="/outputs/poc6/confidence_score_breakdown.png" alt="Breakdown" class="img-preview-trigger" data-title="Figure 4: Confidence Score Breakdown"></div>
+                <div class="gallery-sub">Multi-signal stacked contributions</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">E. AI Sim vs Geometric Evidence</div>
+                <div class="gallery-img-box"><img src="/outputs/poc6/accepted_vs_rejected_scatter.png" alt="Evidence" class="img-preview-trigger" data-title="Figure 5: AI Similarity vs Geometric Evidence"></div>
+                <div class="gallery-sub">Rejection of high-AI false positives</div>
+              </div>
+              <div class="gallery-item">
+                <div class="gallery-title">F. XAI Rejection Diagnostic Codes</div>
+                <div class="gallery-img-box"><img src="/outputs/poc6/xai_rejection_reasons_breakdown.png" alt="XAI Breakdown" class="img-preview-trigger" data-title="Figure 6: XAI Rejection Reasons"></div>
+                <div class="gallery-sub">Frequency of physical failure modes</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Row 3: Failure Taxonomy & POC-7 Handover -->
+          <div class="poc4-tables-row">
+            <div class="poc4-table-card glassmorphism">
+              <div class="table-card-header">
+                <h3>XAI Diagnostic Failure Taxonomy</h3>
+                <span class="tag-pill tag-red" id="poc6FailureCountBadge">52 Rejected Candidates</span>
+              </div>
+              <div class="table-container">
+                <table class="poc4-table" id="poc6FailureTable">
+                  <thead>
+                    <tr>
+                      <th>Diagnostic Code</th>
+                      <th>Physical Meaning</th>
+                      <th>Occurrences</th>
+                      <th>Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="poc6FailureTableBody">
+                    <tr><td><span class="val-code">GEOGRAPHIC_DISJOINT</span></td><td>Candidate coordinates outside physical query footprint</td><td>36</td><td><span class="pill-neutral">Auto-Reject</span></td></tr>
+                    <tr><td><span class="val-code">TOO_FEW_INLIERS</span></td><td>Insufficient geometric consensus (&lt; 6 inliers)</td><td>48</td><td><span class="pill-neutral">Reject</span></td></tr>
+                    <tr><td><span class="val-code">LOW_INLIER_RATIO</span></td><td>Inlier percentage below threshold (&lt; 35%)</td><td>48</td><td><span class="pill-neutral">Reject</span></td></tr>
+                    <tr><td><span class="val-code">AI_SIMILARITY_FALSE_POSITIVE</span></td><td>High AI similarity (&gt;0.75) unsupported by geometry</td><td>14</td><td><span class="pill-neutral">Filter False Positive</span></td></tr>
+                    <tr><td><span class="val-code">POOR_SPATIAL_DISTRIBUTION</span></td><td>Keypoints clustered in single corner/crater rim</td><td>51</td><td><span class="pill-neutral">Reject</span></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="poc4-table-card glassmorphism">
+              <div class="table-card-header">
+                <h3>POC-7 Coregistration & Pose Handover</h3>
+                <span class="tag-pill" style="background: rgba(0, 242, 254, 0.2); color: #00f2fe;">Handoff Schema v1.0.0</span>
+              </div>
+              <div class="card-body" style="font-size: 0.82rem; display: flex; flex-direction: column; gap: 8px;">
+                <div class="info-row"><span class="lbl">Handoff File:</span> <strong class="val-code">outputs/poc6/poc6_verified_for_poc7.json</strong></div>
+                <div class="info-row"><span class="lbl">Downstream Target:</span> <span>POC-7 Relative Pose & Surface Reconstruction</span></div>
+                <div class="info-row"><span class="lbl">Verified True Pairs:</span> <strong id="poc7VerifiedPairsCount">3 pairs</strong></div>
+                <div class="info-row"><span class="lbl">Transformation Model:</span> <span>Rigid Affine (2x3 Matrix)</span></div>
+                <div class="info-row"><span class="lbl">Mean Verified RMSE:</span> <strong class="val-code" id="poc7MeanRmse">0.00 px</strong></div>
+                <p class="footnote" style="margin-top: 8px;">
+                  <strong>Downstream Contract:</strong> POC-7 directly consumes verified inlier correspondences, estimated transformation matrices, sensor modalities, and GSDs from this dataset to estimate cross-camera relative rotation, translation, and 3D surface disparities.
+                </p>
               </div>
             </div>
           </div>
         </div>
       </section>
-    </main>
-  </div>
+
 
   <!-- Image Enlargement Lightbox Modal -->
   <div class="modal-backdrop" id="imagePreviewModal" style="display: none;">

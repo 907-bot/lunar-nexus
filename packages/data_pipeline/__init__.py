@@ -117,6 +117,33 @@ from .poc5_experiment import (
 from .poc5_visualization import (
     generate_all_poc5_figures,
 )
+from .poc6_verification import (
+    VerificationConfig,
+    SpatialDistributionResult,
+    TransformationStabilityResult,
+    ConfidenceBreakdown,
+    XAIDiagnostic,
+    VerifiedCandidateMatch,
+    evaluate_spatial_distribution,
+    evaluate_transformation_stability,
+    evaluate_sensor_compatibility,
+    compute_geographic_overlap_score,
+    calculate_verification_confidence,
+    generate_xai_explanations,
+    GeometricVerifier,
+)
+from .poc6_experiment import (
+    POC6ExperimentRunner,
+)
+from .poc6_visualization import (
+    plot_geometric_verification_gallery,
+    plot_inlier_ratio_vs_confidence,
+    plot_spatial_distribution_inliers,
+    plot_confidence_score_breakdown,
+    plot_accepted_vs_rejected_scatter,
+    plot_xai_rejection_reasons_breakdown,
+    generate_all_poc6_visualizations,
+)
 
 __all__ = [
     "SensorType",
@@ -199,6 +226,29 @@ __all__ = [
     "POC5ExperimentRunner",
     "load_or_create_poc5_test_collection",
     "generate_all_poc5_figures",
+    # POC-6 Geometric Verification + Explainable AI
+    "VerificationConfig",
+    "SpatialDistributionResult",
+    "TransformationStabilityResult",
+    "ConfidenceBreakdown",
+    "XAIDiagnostic",
+    "VerifiedCandidateMatch",
+    "evaluate_spatial_distribution",
+    "evaluate_transformation_stability",
+    "evaluate_sensor_compatibility",
+    "compute_geographic_overlap_score",
+    "calculate_verification_confidence",
+    "generate_xai_explanations",
+    "GeometricVerifier",
+    "POC6ExperimentRunner",
+    "plot_geometric_verification_gallery",
+    "plot_inlier_ratio_vs_confidence",
+    "plot_spatial_distribution_inliers",
+    "plot_confidence_score_breakdown",
+    "plot_accepted_vs_rejected_scatter",
+    "plot_xai_rejection_reasons_breakdown",
+    "generate_all_poc6_visualizations",
 ]
+
 
 

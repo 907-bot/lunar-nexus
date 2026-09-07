@@ -173,6 +173,52 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 self.send_error(404, "POC 5 demo artifacts not generated yet. Run scripts/demo_poc5.py")
             return
 
+        # 3f. API: POC 6 Results JSON
+        if path == "/api/poc6/results":
+            results_path = PROJECT_ROOT / "outputs" / "poc6" / "poc6_results.json"
+            if results_path.exists():
+                with open(results_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "POC 6 results not found. Run scripts/demo_poc6.py")
+            return
+
+        # 3g. API: POC 6 Demo & Figures
+        if path == "/api/poc6/demo":
+            results_path = PROJECT_ROOT / "outputs" / "poc6" / "poc6_results.json"
+            meta_path = PROJECT_ROOT / "outputs" / "poc6" / "poc6_metadata.json"
+            fail_path = PROJECT_ROOT / "outputs" / "poc6" / "poc6_failure_cases.json"
+            if results_path.exists() and meta_path.exists():
+                with open(results_path, "r", encoding="utf-8") as f:
+                    res_data = json.load(f)
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    meta_data = json.load(f)
+                fail_data = {}
+                if fail_path.exists():
+                    with open(fail_path, "r", encoding="utf-8") as f:
+                        fail_data = json.load(f)
+
+                resp = {
+                    "metadata": meta_data,
+                    "total_candidates": res_data.get("total_candidates_verified", 0),
+                    "accepted_count": res_data.get("accepted_count", 0),
+                    "rejected_count": res_data.get("rejected_count", 0),
+                    "candidates": res_data.get("results", []),
+                    "failure_cases": fail_data,
+                    "figures": {
+                        "geometric_verification_gallery": "/outputs/poc6/geometric_verification_gallery.png",
+                        "inlier_ratio_vs_confidence": "/outputs/poc6/inlier_ratio_vs_confidence.png",
+                        "spatial_distribution_inliers": "/outputs/poc6/spatial_distribution_inliers.png",
+                        "confidence_score_breakdown": "/outputs/poc6/confidence_score_breakdown.png",
+                        "accepted_vs_rejected_scatter": "/outputs/poc6/accepted_vs_rejected_scatter.png",
+                        "xai_rejection_reasons_breakdown": "/outputs/poc6/xai_rejection_reasons_breakdown.png",
+                    }
+                }
+                self.send_json_response(resp)
+            else:
+                self.send_error(404, "POC 6 demo artifacts not generated yet. Run scripts/demo_poc6.py")
+            return
+
         # 4. Static Frontend Routing
         if path == "/" or path == "/index.html":
             self.serve_file(WEB_DIR / "index.html", "text/html")
@@ -228,6 +274,20 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 logger.error(f"POC-5 execution error: {e}", exc_info=True)
                 self.send_error(500, f"POC-5 run failed: {str(e)}")
             return
+
+        if path == "/api/poc6/run":
+            try:
+                from scripts.demo_poc6 import run_poc6_demo
+                logger.info("Triggering POC-6 Geometric Verification Run via Web API...")
+                run_poc6_demo()
+                results_path = PROJECT_ROOT / "outputs" / "poc6" / "poc6_results.json"
+                with open(results_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            except Exception as e:
+                logger.error(f"POC-6 execution error: {e}", exc_info=True)
+                self.send_error(500, f"POC-6 run failed: {str(e)}")
+            return
+
 
         self.send_error(404, "Endpoint not found")
 
