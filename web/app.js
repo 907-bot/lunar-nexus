@@ -1134,9 +1134,10 @@ function initNexus3DStudio() {
     controls: null,
     sunLight: null,
     ambientLight: null,
-    terrainMesh: null,
+    moonGlobe: null,
+    craterReliefMesh: null,
     modulesGroup: null,
-    conduitsGroup: null,
+    footprintsGroup: null,
     highlightRing: null,
     roverGroup: null,
     modules: {},
@@ -1144,6 +1145,7 @@ function initNexus3DStudio() {
     sunElevation: 3.5,
     sunAzimuth: 124.5,
     isBuildingAnimated: false,
+    viewMode: 'globe', // 'globe' or 'surface'
     raycaster: new THREE.Raycaster(),
     mouse: new THREE.Vector2(),
     animationFrameId: null,
@@ -1157,10 +1159,10 @@ function initNexus3DStudio() {
 
   // Deep Space Starfield
   const starGeo = new THREE.BufferGeometry();
-  const starCount = 3000;
+  const starCount = 3500;
   const starPos = new Float32Array(starCount * 3);
   for (let i = 0; i < starCount * 3; i += 3) {
-    const r = 3500 + Math.random() * 2500;
+    const r = 3800 + Math.random() * 2500;
     const theta = Math.random() * Math.PI * 2;
     const phi = Math.acos((Math.random() * 2) - 1);
     starPos[i] = r * Math.sin(phi) * Math.cos(theta);
@@ -1175,8 +1177,8 @@ function initNexus3DStudio() {
   // 2. Camera & Renderer
   const width = container.clientWidth || window.innerWidth;
   const height = container.clientHeight || (window.innerHeight - 64);
-  n3d.camera = new THREE.PerspectiveCamera(45, width / height, 1, 30000);
-  n3d.camera.position.set(450, 320, 680);
+  n3d.camera = new THREE.PerspectiveCamera(45, width / height, 1, 35000);
+  n3d.camera.position.set(0, 220, 920); // Initial full Moon globe view
 
   n3d.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
   n3d.renderer.setSize(width, height);
@@ -1193,18 +1195,19 @@ function initNexus3DStudio() {
     n3d.controls = new THREE.OrbitControls(n3d.camera, n3d.renderer.domElement);
     n3d.controls.enableDamping = true;
     n3d.controls.dampingFactor = 0.05;
-    n3d.controls.maxPolarAngle = Math.PI / 2 - 0.02; // Don't go below ground
-    n3d.controls.minDistance = 40;
+    n3d.controls.minDistance = 30;
     n3d.controls.maxDistance = 4500;
-    n3d.controls.target.set(370, 10, -335); // Focus near Hab Core
+    n3d.controls.target.set(0, 0, 0);
+    n3d.controls.autoRotate = false;
+    n3d.controls.autoRotateSpeed = 0.4;
     n3d.controls.update();
   }
 
-  // 4. Lighting: Physical Polar Sun & Deep Space Bounce
-  n3d.ambientLight = new THREE.AmbientLight(0x162038, 0.45);
+  // 4. Lighting: Physical Polar Sun & Deep Space Ambient Fill
+  n3d.ambientLight = new THREE.AmbientLight(0x182238, 0.45);
   n3d.scene.add(n3d.ambientLight);
 
-  n3d.sunLight = new THREE.DirectionalLight(0xfff6e5, 2.4);
+  n3d.sunLight = new THREE.DirectionalLight(0xfff6e5, 2.5);
   n3d.sunLight.castShadow = true;
   n3d.sunLight.shadow.mapSize.width = 2048;
   n3d.sunLight.shadow.mapSize.height = 2048;
@@ -1226,65 +1229,246 @@ function initNexus3DStudio() {
     const horiz = dist * Math.cos(elRad);
     const x = horiz * Math.sin(azRad);
     const z = horiz * Math.cos(azRad);
-    n3d.sunLight.position.set(x, Math.max(y, 15), z);
-    n3d.sunLight.target.position.set(370, 0, -335);
+    n3d.sunLight.position.set(x, Math.max(y, 20), z);
+    n3d.sunLight.target.position.set(0, 0, 0);
     n3d.scene.add(n3d.sunLight.target);
   }
   updateSunPosition();
 
-  // 5. 3D Lunar Terrain Surface (Boguslawsky Crater Topography)
-  const terrainSize = 1600;
-  const segments = 127;
-  const terrainGeo = new THREE.PlaneGeometry(terrainSize, terrainSize, segments, segments);
-  const posAttr = terrainGeo.attributes.position;
+  // 5. Complete Spherical Moon Lunar Model (Globe)
+  const MOON_RADIUS = 300;
 
-  // Synthesize realistic Boguslawsky crater topography relief
-  for (let i = 0; i < posAttr.count; i++) {
-    const x = posAttr.getX(i);
-    const y = posAttr.getY(i);
-    const r = Math.sqrt(x * x + y * y);
-
-    // Main crater bowl (radius ~520m)
-    let z = 0;
-    const craterR = 520;
-    if (r < craterR) {
-      const norm = r / craterR;
-      z = -75 * (1 - norm * norm) + 12 * Math.cos(norm * Math.PI * 3);
-    } else if (r < craterR + 140) {
-      // Raised rim
-      const norm = (r - craterR) / 140;
-      z = 24 * Math.sin(norm * Math.PI);
-    }
-    // High-frequency regolith undulations
-    z += Math.sin(x * 0.02) * Math.cos(y * 0.02) * 5.5;
-    z += Math.sin(x * 0.05 + 1.2) * Math.cos(y * 0.04) * 2.2;
-
-    posAttr.setZ(i, z);
+  function latLonToVector3(lat, lon, radius = MOON_RADIUS) {
+    const phi = (90 - lat) * (Math.PI / 180);
+    const theta = (lon + 180) * (Math.PI / 180);
+    const x = -radius * Math.sin(phi) * Math.cos(theta);
+    const y = radius * Math.cos(phi);
+    const z = radius * Math.sin(phi) * Math.sin(theta);
+    return new THREE.Vector3(x, y, z);
   }
-  terrainGeo.computeVertexNormals();
 
-  const terrainMat = new THREE.MeshStandardMaterial({
-    color: 0x424650,
-    roughness: 0.94,
-    metalness: 0.06,
-    flatShading: true,
+  function createLunarSurfaceTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 2048;
+    canvas.height = 1024;
+    const ctx = canvas.getContext('2d');
+
+    // Base lunar crust tone (pale greyish basalt)
+    ctx.fillStyle = '#656872';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // High-frequency lunar regolith grain & impact noise
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imgData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const noise = (Math.random() - 0.5) * 24;
+      data[i] = Math.min(255, Math.max(0, data[i] + noise));
+      data[i + 1] = Math.min(255, Math.max(0, data[i + 1] + noise));
+      data[i + 2] = Math.min(255, Math.max(0, data[i + 2] + noise));
+    }
+    ctx.putImageData(imgData, 0, 0);
+
+    // Draw Major Lunar Maria (Dark Basaltic Plains)
+    function drawMare(cx, cy, rx, ry, opacity = 0.58) {
+      const radGrad = ctx.createRadialGradient(cx, cy, 5, cx, cy, Math.max(rx, ry));
+      radGrad.addColorStop(0, `rgba(32, 35, 42, ${opacity})`);
+      radGrad.addColorStop(0.65, `rgba(40, 44, 52, ${opacity * 0.85})`);
+      radGrad.addColorStop(1, 'rgba(101, 104, 114, 0)');
+      ctx.save();
+      ctx.beginPath();
+      ctx.translate(cx, cy);
+      ctx.scale(rx, ry);
+      ctx.arc(0, 0, 1, 0, Math.PI * 2);
+      ctx.restore();
+      ctx.fillStyle = radGrad;
+      ctx.fill();
+    }
+
+    // Nearside Lunar Maria
+    drawMare(600, 360, 240, 190, 0.7); // Oceanus Procellarum
+    drawMare(750, 320, 140, 120, 0.65); // Mare Imbrium
+    drawMare(980, 350, 110, 95, 0.62);  // Mare Serenitatis
+    drawMare(1050, 450, 120, 100, 0.65); // Mare Tranquillitatis
+    drawMare(1250, 400, 75, 65, 0.65);  // Mare Crisium
+    drawMare(720, 540, 110, 90, 0.58);  // Mare Nubium
+    drawMare(620, 580, 80, 70, 0.55);   // Mare Humorum
+    drawMare(1150, 520, 95, 80, 0.58);  // Mare Fecunditatis
+    drawMare(850, 220, 130, 60, 0.5);   // Mare Frigoris
+    drawMare(1000, 860, 210, 110, 0.45); // South Pole Aitken Basin
+
+    // Draw Tycho Crater and Brilliant Radial Ray System
+    const tychoX = 780;
+    const tychoY = 700;
+    ctx.strokeStyle = 'rgba(235, 240, 255, 0.28)';
+    ctx.lineWidth = 1.5;
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 16) {
+      ctx.beginPath();
+      ctx.moveTo(tychoX, tychoY);
+      const len = 250 + Math.random() * 300;
+      ctx.lineTo(tychoX + Math.cos(a) * len, tychoY + Math.sin(a) * len);
+      ctx.stroke();
+    }
+
+    // Draw Crater Rings
+    for (let c = 0; c < 180; c++) {
+      const cx = Math.random() * canvas.width;
+      const cy = Math.random() * canvas.height;
+      const cr = 4 + Math.random() * 22;
+      ctx.beginPath();
+      ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(210, 215, 225, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx + 1, cy + 1, cr * 0.8, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(30, 32, 38, 0.35)';
+      ctx.fill();
+    }
+
+    // Latitude & Longitude Graticule Lines
+    ctx.strokeStyle = 'rgba(0, 242, 254, 0.08)';
+    ctx.lineWidth = 1;
+    for (let y = 0; y <= canvas.height; y += canvas.height / 6) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(canvas.width, y);
+      ctx.stroke();
+    }
+    for (let x = 0; x <= canvas.width; x += canvas.width / 12) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, canvas.height);
+      ctx.stroke();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = THREE.RepeatWrapping;
+    tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  }
+
+  // Construct Celestial Moon Sphere
+  const moonGeo = new THREE.SphereGeometry(MOON_RADIUS, 96, 96);
+  const moonMat = new THREE.MeshStandardMaterial({
+    map: createLunarSurfaceTexture(),
+    roughness: 0.92,
+    metalness: 0.05,
   });
 
-  n3d.terrainMesh = new THREE.Mesh(terrainGeo, terrainMat);
-  n3d.terrainMesh.rotation.x = -Math.PI / 2;
-  n3d.terrainMesh.receiveShadow = true;
-  n3d.scene.add(n3d.terrainMesh);
+  n3d.moonGlobe = new THREE.Mesh(moonGeo, moonMat);
+  n3d.moonGlobe.castShadow = true;
+  n3d.moonGlobe.receiveShadow = true;
+  n3d.scene.add(n3d.moonGlobe);
 
-  // Subtle coordinate reference grid on lunar surface
-  const gridHelper = new THREE.GridHelper(1600, 32, 0x00f2fe, 0x1f293d);
-  gridHelper.position.y = 0.5;
-  gridHelper.material.opacity = 0.15;
-  gridHelper.material.transparent = true;
-  n3d.scene.add(gridHelper);
+  // Lunar Graticule Orbit Ring
+  const orbitRingGeo = new THREE.RingGeometry(MOON_RADIUS + 4, MOON_RADIUS + 6, 96);
+  const orbitRingMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, side: THREE.DoubleSide, transparent: true, opacity: 0.12 });
+  const orbitRing = new THREE.Mesh(orbitRingGeo, orbitRingMat);
+  orbitRing.rotation.x = Math.PI / 2;
+  n3d.scene.add(orbitRing);
 
-  // 6. Base Infrastructure Modules
+  // 6. Ingestion Layer Sensor Footprints on the Moon Sphere
+  n3d.footprintsGroup = new THREE.Group();
+  n3d.scene.add(n3d.footprintsGroup);
+
+  const INGESTION_FOOTPRINTS = [
+    {
+      id: 'ohrc',
+      name: 'Chandrayaan-2 OHRC (0.25 m/px)',
+      min_lat: -74.5, max_lat: -72.0, min_lon: 24.0, max_lon: 28.0,
+      color: 0x00f2fe,
+      centerLat: -73.25, centerLon: 26.0,
+      label: 'CH2 OHRC (0.25m)',
+    },
+    {
+      id: 'tmc',
+      name: 'Chandrayaan-2 TMC-2 (3D DEM Triplet)',
+      min_lat: -75.0, max_lat: -71.5, min_lon: 22.0, max_lon: 30.0,
+      color: 0x55efc4,
+      centerLat: -73.25, centerLon: 26.0,
+      label: 'TMC-2 DEM Triplet',
+    },
+    {
+      id: 'lroc',
+      name: 'NASA LRO NAC (0.5 m/px)',
+      min_lat: -74.5, max_lat: -72.0, min_lon: 24.0, max_lon: 28.0,
+      color: 0xff7675,
+      centerLat: -73.25, centerLon: 26.0,
+      label: 'LRO NAC Reference',
+    },
+    {
+      id: 'iirs',
+      name: 'Chandrayaan-2 IIRS (2.85µm Ice Anomaly)',
+      min_lat: -74.0, max_lat: -72.5, min_lon: 25.0, max_lon: 27.5,
+      color: 0xa29bfe,
+      centerLat: -73.25, centerLon: 26.2,
+      label: 'IIRS Hydroxyl Anomaly',
+    },
+  ];
+
+  INGESTION_FOOTPRINTS.forEach(fp => {
+    // Build spherical ribbon border hugging the Moon surface
+    const points = [];
+    const steps = 8;
+    // South edge
+    for (let s = 0; s <= steps; s++) {
+      const lon = fp.min_lon + (fp.max_lon - fp.min_lon) * (s / steps);
+      points.push(latLonToVector3(fp.min_lat, lon, MOON_RADIUS + 1.2));
+    }
+    // East edge
+    for (let s = 0; s <= steps; s++) {
+      const lat = fp.min_lat + (fp.max_lat - fp.min_lat) * (s / steps);
+      points.push(latLonToVector3(lat, fp.max_lon, MOON_RADIUS + 1.2));
+    }
+    // North edge
+    for (let s = 0; s <= steps; s++) {
+      const lon = fp.max_lon - (fp.max_lon - fp.min_lon) * (s / steps);
+      points.push(latLonToVector3(fp.max_lat, lon, MOON_RADIUS + 1.2));
+    }
+    // West edge
+    for (let s = 0; s <= steps; s++) {
+      const lat = fp.max_lat - (fp.max_lat - fp.min_lat) * (s / steps);
+      points.push(latLonToVector3(lat, fp.min_lon, MOON_RADIUS + 1.2));
+    }
+
+    const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+    const lineMat = new THREE.LineBasicMaterial({ color: fp.color, linewidth: 2 });
+    const lineLoop = new THREE.LineLoop(lineGeo, lineMat);
+    n3d.footprintsGroup.add(lineLoop);
+
+    // Center pulsating beacon
+    const cPos = latLonToVector3(fp.centerLat, fp.centerLon, MOON_RADIUS + 2.0);
+    const beaconGeo = new THREE.SphereGeometry(2.0, 12, 12);
+    const beaconMat = new THREE.MeshBasicMaterial({ color: fp.color });
+    const beaconMesh = new THREE.Mesh(beaconGeo, beaconMat);
+    beaconMesh.position.copy(cPos);
+    n3d.footprintsGroup.add(beaconMesh);
+  });
+
+  // 7. Sited Boguslawsky Base Topography on the Moon Sphere
+  // Target location: South Pole (-73.25° Lat, 26.0° Lon)
+  const boguCenter = latLonToVector3(-73.25, 26.0, MOON_RADIUS);
+  const boguNormal = boguCenter.clone().normalize();
+
+  // Anchored Infrastructure Group
   n3d.modulesGroup = new THREE.Group();
+  n3d.modulesGroup.position.copy(boguCenter);
+  // Align local +Y with the Moon's spherical surface normal
+  n3d.modulesGroup.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), boguNormal);
   n3d.scene.add(n3d.modulesGroup);
+
+  // Local Boguslawsky Crater Relief Rim
+  const rimGeo = new THREE.RingGeometry(18, 28, 48);
+  const rimMat = new THREE.MeshStandardMaterial({
+    color: 0x3d414a,
+    roughness: 0.96,
+    metalness: 0.04,
+    side: THREE.DoubleSide,
+  });
+  const rimMesh = new THREE.Mesh(rimGeo, rimMat);
+  rimMesh.rotation.x = -Math.PI / 2;
+  rimMesh.position.y = 0.2;
+  n3d.modulesGroup.add(rimMesh);
 
   // Telemetry metadata dictionary
   const MODULE_METADATA = {
@@ -1292,8 +1476,8 @@ function initNexus3DStudio() {
       id: 'hab_core_01',
       name: 'Primary Living Core Dome',
       type: 'HABITAT_CORE',
-      pos: { x: 370, y: 0, z: -335 },
-      coordsStr: '370.0m E, 335.0m N',
+      pos: { x: 0, y: 0, z: 0 },
+      coordsStr: '73.25°S, 26.00°E (Boguslawsky Rim)',
       slope: '4.48° (Compliant ≤ 5°)',
       solar: '88.5% Diurnal Peak',
       isruDist: '427.5 m (Safe Proximity)',
@@ -1306,8 +1490,8 @@ function initNexus3DStudio() {
       id: 'hab_solar_01',
       name: 'Bifacial Solar PV Farm',
       type: 'SOLAR_FARM',
-      pos: { x: 420, y: 0, z: -685 },
-      coordsStr: '420.0m E, 685.0m N',
+      pos: { x: 12, y: 0, z: -15 },
+      coordsStr: '73.20°S, 26.05°E (Sunward Plateau)',
       slope: '0.80° (Super-Flat Compliant)',
       solar: '94.2% Continuous Polar Sunlight',
       isruDist: '570.2 m',
@@ -1320,8 +1504,8 @@ function initNexus3DStudio() {
       id: 'hab_pad_01',
       name: 'Touchdown Landing Pad',
       type: 'LANDING_PAD',
-      pos: { x: 270, y: 0, z: 815 },
-      coordsStr: '270.0m E, 815.0m S',
+      pos: { x: -16, y: 0, z: 22 },
+      coordsStr: '73.35°S, 25.90°E (Plume Safety Zone)',
       slope: '1.47° (Stable Sintered Touchdown)',
       solar: '79.1% Diurnal Illumination',
       isruDist: '1,215.0 m',
@@ -1334,8 +1518,8 @@ function initNexus3DStudio() {
       id: 'hab_berm_01',
       name: 'Regolith Blast Berm',
       type: 'REGOLITH_BERM',
-      pos: { x: 320, y: 0, z: 240 },
-      coordsStr: '320.0m E, 240.0m S',
+      pos: { x: -8, y: 0, z: 10 },
+      coordsStr: '73.30°S, 25.95°E (Deflection Line)',
       slope: '22.33° (Constructed Slope Angle)',
       solar: 'Shielded Deflection Zone',
       isruDist: '470.8 m',
@@ -1348,8 +1532,8 @@ function initNexus3DStudio() {
       id: 'hab_isru_01',
       name: 'Volatiles & Water-Ice ISRU Plant',
       type: 'RESOURCE_STATION',
-      pos: { x: 790, y: 0, z: -255 },
-      coordsStr: '790.0m E, 255.0m N',
+      pos: { x: 18, y: 0, z: 8 },
+      coordsStr: '73.28°S, 26.20°E (Cold Trap Boundary)',
       slope: '1.20° (Smooth Cold-Trap Apron)',
       solar: 'Permanent Cold-Trap Boundary',
       isruDist: '0.0 m (At Extraction Source)',
@@ -1360,13 +1544,13 @@ function initNexus3DStudio() {
     },
   };
 
-  // Build Architectural 3D Meshes
-  // 1. Habitat Core
+  // Build Architectural 3D Meshes onto Lunar Surface Group
+  // 1. Habitat Core Dome
   const coreGroup = new THREE.Group();
-  coreGroup.position.set(370, 0, -335);
+  coreGroup.position.set(0, 0, 0);
   coreGroup.name = 'hab_core_01';
 
-  const domeGeo = new THREE.SphereGeometry(22, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+  const domeGeo = new THREE.SphereGeometry(5.5, 24, 16, 0, Math.PI * 2, 0, Math.PI / 2);
   const domeMat = new THREE.MeshStandardMaterial({
     color: 0xf5f8fc,
     roughness: 0.22,
@@ -1378,7 +1562,7 @@ function initNexus3DStudio() {
   coreGroup.add(domeMesh);
 
   // Cupola glass viewport on top
-  const cupolaGeo = new THREE.SphereGeometry(6, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
+  const cupolaGeo = new THREE.SphereGeometry(1.6, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2);
   const cupolaMat = new THREE.MeshStandardMaterial({
     color: 0x00f2fe,
     roughness: 0.1,
@@ -1387,15 +1571,15 @@ function initNexus3DStudio() {
     opacity: 0.75,
   });
   const cupolaMesh = new THREE.Mesh(cupolaGeo, cupolaMat);
-  cupolaMesh.position.y = 20;
+  cupolaMesh.position.y = 5.2;
   coreGroup.add(cupolaMesh);
 
   // Airlock pod
-  const airlockGeo = new THREE.CylinderGeometry(4.5, 4.5, 14, 16);
+  const airlockGeo = new THREE.CylinderGeometry(1.2, 1.2, 4.0, 16);
   const airlockMat = new THREE.MeshStandardMaterial({ color: 0xd8e0eb, roughness: 0.3, metalness: 0.4 });
   const airlockMesh = new THREE.Mesh(airlockGeo, airlockMat);
   airlockMesh.rotation.z = Math.PI / 2;
-  airlockMesh.position.set(24, 4.5, 0);
+  airlockMesh.position.set(5.8, 1.2, 0);
   airlockMesh.castShadow = true;
   coreGroup.add(airlockMesh);
 
@@ -1404,7 +1588,7 @@ function initNexus3DStudio() {
 
   // 2. Solar PV Farm
   const solarGroup = new THREE.Group();
-  solarGroup.position.set(420, 0, -685);
+  solarGroup.position.set(12, 0, -15);
   solarGroup.name = 'hab_solar_01';
 
   const panelMat = new THREE.MeshStandardMaterial({
@@ -1414,16 +1598,16 @@ function initNexus3DStudio() {
   });
   const mastMat = new THREE.MeshStandardMaterial({ color: 0x8892a0, metalness: 0.5 });
 
-  for (const offset of [-28, 0, 28]) {
-    const mastGeo = new THREE.CylinderGeometry(0.8, 1.2, 34, 12);
+  for (const offset of [-6, 0, 6]) {
+    const mastGeo = new THREE.CylinderGeometry(0.25, 0.35, 9.0, 12);
     const mastMesh = new THREE.Mesh(mastGeo, mastMat);
-    mastMesh.position.set(offset, 17, 0);
+    mastMesh.position.set(offset, 4.5, 0);
     mastMesh.castShadow = true;
     solarGroup.add(mastMesh);
 
-    const panelGeo = new THREE.BoxGeometry(18, 28, 1.2);
+    const panelGeo = new THREE.BoxGeometry(4.5, 7.5, 0.4);
     const panelMesh = new THREE.Mesh(panelGeo, panelMat);
-    panelMesh.position.set(offset, 20, 0);
+    panelMesh.position.set(offset, 5.5, 0);
     panelMesh.rotation.y = (n3d.sunAzimuth * Math.PI) / 180 + Math.PI / 2;
     panelMesh.castShadow = true;
     solarGroup.add(panelMesh);
@@ -1433,62 +1617,44 @@ function initNexus3DStudio() {
 
   // 3. Touchdown Landing Pad
   const padGroup = new THREE.Group();
-  padGroup.position.set(270, 0, 815);
+  padGroup.position.set(-16, 0, 22);
   padGroup.name = 'hab_pad_01';
 
-  const padGeo = new THREE.CylinderGeometry(52, 54, 3, 48);
+  const padGeo = new THREE.CylinderGeometry(12, 12.5, 0.8, 48);
   const padMat = new THREE.MeshStandardMaterial({ color: 0x22262d, roughness: 0.7, metalness: 0.2 });
   const padMesh = new THREE.Mesh(padGeo, padMat);
-  padMesh.position.y = 1.5;
+  padMesh.position.y = 0.4;
   padMesh.receiveShadow = true;
   padGroup.add(padMesh);
 
-  // Hazard Touchdown Rings
-  const ringGeo = new THREE.RingGeometry(32, 34, 48);
+  // Concentric Hazard Touchdown Rings
+  const ringGeo = new THREE.RingGeometry(7.5, 8.2, 48);
   const ringMat = new THREE.MeshBasicMaterial({ color: 0xffa502, side: THREE.DoubleSide });
   const ringMesh = new THREE.Mesh(ringGeo, ringMat);
   ringMesh.rotation.x = -Math.PI / 2;
-  ringMesh.position.y = 3.1;
+  ringMesh.position.y = 0.85;
   padGroup.add(ringMesh);
 
-  const innerRingGeo = new THREE.RingGeometry(14, 15.5, 36);
+  const innerRingGeo = new THREE.RingGeometry(3.2, 3.8, 36);
   const innerRingMat = new THREE.MeshBasicMaterial({ color: 0x00f2fe, side: THREE.DoubleSide });
   const innerRingMesh = new THREE.Mesh(innerRingGeo, innerRingMat);
   innerRingMesh.rotation.x = -Math.PI / 2;
-  innerRingMesh.position.y = 3.12;
+  innerRingMesh.position.y = 0.86;
   padGroup.add(innerRingMesh);
 
-  // 4 Perimeter Beacon Light Poles
-  for (let b = 0; b < 4; b++) {
-    const ang = (b * Math.PI) / 2 + Math.PI / 4;
-    const bx = Math.cos(ang) * 50;
-    const bz = Math.sin(ang) * 50;
-    const poleGeo = new THREE.CylinderGeometry(0.5, 0.5, 12, 8);
-    const poleMat = new THREE.MeshStandardMaterial({ color: 0x555c68 });
-    const pole = new THREE.Mesh(poleGeo, poleMat);
-    pole.position.set(bx, 6, bz);
-    padGroup.add(pole);
-
-    const bulbGeo = new THREE.SphereGeometry(1.2, 8, 8);
-    const bulbMat = new THREE.MeshBasicMaterial({ color: 0xff4757 });
-    const bulb = new THREE.Mesh(bulbGeo, bulbMat);
-    bulb.position.set(bx, 12.5, bz);
-    padGroup.add(bulb);
-  }
   n3d.modulesGroup.add(padGroup);
   n3d.modules.hab_pad_01 = padGroup;
 
   // 4. Regolith Blast Berm
   const bermGroup = new THREE.Group();
-  bermGroup.position.set(320, 0, 240);
+  bermGroup.position.set(-8, 0, 10);
   bermGroup.name = 'hab_berm_01';
 
-  // Crescent curved wall
-  const bermGeo = new THREE.BoxGeometry(85, 12, 16);
+  const bermGeo = new THREE.BoxGeometry(18, 3.5, 3.8);
   const bermMat = new THREE.MeshStandardMaterial({ color: 0x5a5d66, roughness: 0.96, metalness: 0.04 });
   const bermMesh = new THREE.Mesh(bermGeo, bermMat);
-  bermMesh.position.y = 6;
-  bermMesh.rotation.y = 0.35;
+  bermMesh.position.y = 1.75;
+  bermMesh.rotation.y = 0.45;
   bermMesh.castShadow = true;
   bermMesh.receiveShadow = true;
   bermGroup.add(bermMesh);
@@ -1498,65 +1664,57 @@ function initNexus3DStudio() {
 
   // 5. Volatiles & ISRU Extraction Plant
   const isruGroup = new THREE.Group();
-  isruGroup.position.set(790, 0, -255);
+  isruGroup.position.set(18, 0, 8);
   isruGroup.name = 'hab_isru_01';
 
-  // Processing building
-  const isruBldgGeo = new THREE.BoxGeometry(32, 14, 24);
+  const isruBldgGeo = new THREE.BoxGeometry(8, 4.0, 6.0);
   const isruBldgMat = new THREE.MeshStandardMaterial({ color: 0xd4dce8, roughness: 0.35, metalness: 0.4 });
   const isruBldg = new THREE.Mesh(isruBldgGeo, isruBldgMat);
-  isruBldg.position.y = 7;
+  isruBldg.position.y = 2.0;
   isruBldg.castShadow = true;
   isruGroup.add(isruBldg);
 
-  // Twin Cryogenic Dewars
-  for (const tox of [-10, 10]) {
-    const tankGeo = new THREE.SphereGeometry(6.5, 16, 16);
+  for (const tox of [-2.5, 2.5]) {
+    const tankGeo = new THREE.SphereGeometry(1.8, 16, 16);
     const tankMat = new THREE.MeshStandardMaterial({ color: 0x2ed573, roughness: 0.2, metalness: 0.6 });
     const tank = new THREE.Mesh(tankGeo, tankMat);
-    tank.position.set(tox, 16, 0);
+    tank.position.set(tox, 4.2, 0);
     tank.castShadow = true;
     isruGroup.add(tank);
   }
   n3d.modulesGroup.add(isruGroup);
   n3d.modules.hab_isru_01 = isruGroup;
 
-  // 7. Pressurized Conduits & Surface Exploration Rover
-  n3d.conduitsGroup = new THREE.Group();
+  // Pressurized Conduits between Core and ISRU
   const pipeCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(370, 2, -335),
-    new THREE.Vector3(580, 2, -300),
-    new THREE.Vector3(790, 2, -255),
+    new THREE.Vector3(0, 0.4, 0),
+    new THREE.Vector3(9, 0.4, 4),
+    new THREE.Vector3(18, 0.4, 8),
   ]);
-  const pipeGeo = new THREE.TubeGeometry(pipeCurve, 32, 1.2, 8, false);
-  const pipeMat = new THREE.MeshStandardMaterial({
-    color: 0x00f2fe,
-    emissive: 0x005577,
-    roughness: 0.3,
-  });
+  const pipeGeo = new THREE.TubeGeometry(pipeCurve, 24, 0.35, 8, false);
+  const pipeMat = new THREE.MeshStandardMaterial({ color: 0x00f2fe, emissive: 0x005577 });
   const pipeMesh = new THREE.Mesh(pipeGeo, pipeMat);
-  n3d.conduitsGroup.add(pipeMesh);
-  n3d.scene.add(n3d.conduitsGroup);
+  n3d.modulesGroup.add(pipeMesh);
 
-  // Rover Mesh
+  // Surface Rover
   n3d.roverGroup = new THREE.Group();
   const roverBody = new THREE.Mesh(
-    new THREE.BoxGeometry(7, 3.5, 5),
+    new THREE.BoxGeometry(2.2, 1.2, 1.5),
     new THREE.MeshStandardMaterial({ color: 0xe6edf5, metalness: 0.5 })
   );
-  roverBody.position.y = 3;
+  roverBody.position.y = 0.8;
   n3d.roverGroup.add(roverBody);
   const mast = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.3, 0.3, 5, 8),
+    new THREE.CylinderGeometry(0.1, 0.1, 1.6, 8),
     new THREE.MeshBasicMaterial({ color: 0x00f2fe })
   );
-  mast.position.set(2, 6, 0);
+  mast.position.set(0.6, 1.8, 0);
   n3d.roverGroup.add(mast);
-  n3d.roverGroup.position.set(500, 0, -315);
-  n3d.scene.add(n3d.roverGroup);
+  n3d.roverGroup.position.set(8, 0, 4);
+  n3d.modulesGroup.add(n3d.roverGroup);
 
-  // 8. 3D Selection Highlight Ring
-  const selRingGeo = new THREE.RingGeometry(30, 32.5, 48);
+  // 8. Selection Highlight Ring
+  const selRingGeo = new THREE.RingGeometry(7.0, 7.8, 48);
   const selRingMat = new THREE.MeshBasicMaterial({
     color: 0x00f2fe,
     side: THREE.DoubleSide,
@@ -1565,19 +1723,94 @@ function initNexus3DStudio() {
   });
   n3d.highlightRing = new THREE.Mesh(selRingGeo, selRingMat);
   n3d.highlightRing.rotation.x = -Math.PI / 2;
-  n3d.highlightRing.position.set(370, 0.8, -335);
-  n3d.scene.add(n3d.highlightRing);
+  n3d.highlightRing.position.set(0, 0.2, 0);
+  n3d.modulesGroup.add(n3d.highlightRing);
 
-  // 9. Interactive Telemetry Selection Function
+  // 9. Camera Flight Transition Function
+  function flyTo(targetCamPos, targetLookAt, duration = 1200, onComplete = null) {
+    if (!n3d.controls) return;
+    const startCam = n3d.camera.position.clone();
+    const startLook = n3d.controls.target.clone();
+    const startTime = performance.now();
+
+    function step() {
+      const now = performance.now();
+      const p = Math.min((now - startTime) / duration, 1.0);
+      // Smooth cubic ease in-out
+      const ease = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+
+      n3d.camera.position.lerpVectors(startCam, targetCamPos, ease);
+      n3d.controls.target.lerpVectors(startLook, targetLookAt, ease);
+      n3d.controls.update();
+
+      if (p < 1.0) {
+        requestAnimationFrame(step);
+      } else {
+        if (onComplete) onComplete();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  // 10. View Mode Switcher Handlers
+  const btnModeGlobe = document.getElementById('btnModeGlobe');
+  const btnModeSurface = document.getElementById('btnModeSurface');
+
+  function setViewMode(mode) {
+    n3d.viewMode = mode;
+    if (mode === 'globe') {
+      if (btnModeGlobe) btnModeGlobe.classList.add('active');
+      if (btnModeSurface) btnModeSurface.classList.remove('active');
+      n3d.controls.autoRotate = true;
+      flyTo(new THREE.Vector3(0, 220, 920), new THREE.Vector3(0, 0, 0), 1200);
+      showToast('Switched to Global Lunar Sphere View (Ingestion Overlays)', '🌍');
+    } else {
+      if (btnModeGlobe) btnModeGlobe.classList.remove('active');
+      if (btnModeSurface) btnModeSurface.classList.add('active');
+      n3d.controls.autoRotate = false;
+      // Close up at South Pole site
+      const camSurface = boguCenter.clone().add(boguNormal.clone().multiplyScalar(45)).add(new THREE.Vector3(15, 20, 25));
+      flyTo(camSurface, boguCenter, 1400);
+      showToast('Zoomed into South Pole Base Site (Boguslawsky Crater)', '🔍');
+    }
+  }
+
+  if (btnModeGlobe) {
+    btnModeGlobe.addEventListener('click', () => setViewMode('globe'));
+  }
+  if (btnModeSurface) {
+    btnModeSurface.addEventListener('click', () => setViewMode('surface'));
+  }
+
+  // Ingestion Chips "FLY ↗" Buttons
+  document.querySelectorAll('.ingestion-chip').forEach(chip => {
+    const btn = chip.querySelector('.btn-flyto');
+    if (btn) {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const targetKey = chip.getAttribute('data-target');
+        const fp = INGESTION_FOOTPRINTS.find(f => f.id === targetKey);
+        if (fp) {
+          const targetCenter = latLonToVector3(fp.centerLat, fp.centerLon, MOON_RADIUS);
+          const normal = targetCenter.clone().normalize();
+          const camPos = targetCenter.clone().add(normal.clone().multiplyScalar(90));
+          n3d.controls.autoRotate = false;
+          flyTo(camPos, targetCenter, 1300);
+          showToast(`Focusing on Ingestion Footprint: ${fp.name}`, '🛰️');
+        }
+      });
+    }
+  });
+
+  // 11. Module Selection Function
   function selectModule(modId) {
     const data = MODULE_METADATA[modId];
     if (!data) return;
     n3d.selectedModuleId = modId;
 
-    // Move highlight ring
     const obj = n3d.modules[modId];
     if (obj) {
-      n3d.highlightRing.position.set(obj.position.x, 0.8, obj.position.z);
+      n3d.highlightRing.position.set(obj.position.x, 0.2, obj.position.z);
       n3d.highlightRing.visible = true;
     }
 
@@ -1600,7 +1833,6 @@ function initNexus3DStudio() {
     if (blastEl) blastEl.textContent = data.blastDist;
     if (gnnEl) gnnEl.textContent = data.gnnScore;
 
-    // Highlight corresponding card in Left Deck
     document.querySelectorAll('.module-toggle-item').forEach(item => {
       if (item.getAttribute('data-mod') === modId) {
         item.classList.add('active');
@@ -1610,7 +1842,7 @@ function initNexus3DStudio() {
     });
   }
 
-  // 10. Click Raycasting
+  // 12. Click Raycasting
   container.addEventListener('click', (event) => {
     const rect = container.getBoundingClientRect();
     n3d.mouse.x = ((event.clientX - rect.left) / container.clientWidth) * 2 - 1;
@@ -1631,20 +1863,18 @@ function initNexus3DStudio() {
     }
   });
 
-  // 11. Module Toggle Items in Left Deck
+  // Module Toggle Items
   document.querySelectorAll('.module-toggle-item').forEach(item => {
     item.addEventListener('click', () => {
       const modId = item.getAttribute('data-mod');
       selectModule(modId);
-      // Center camera gently toward selected module
-      const targetData = MODULE_METADATA[modId];
-      if (targetData && n3d.controls) {
-        n3d.controls.target.set(targetData.pos.x, 10, targetData.pos.z);
+      if (n3d.viewMode === 'globe') {
+        setViewMode('surface');
       }
     });
   });
 
-  // 12. Animated Construction Deck
+  // 13. Animated Construction Deck
   const btnBuildAll = document.getElementById('btnBuildAllAnimated');
   if (btnBuildAll) {
     btnBuildAll.addEventListener('click', () => {
@@ -1670,22 +1900,27 @@ function initNexus3DStudio() {
 
   function runBaseConstructionAnimation() {
     if (n3d.isBuildingAnimated) return;
+
+    // Switch to surface view for best cinematic vantage
+    if (n3d.viewMode !== 'surface') {
+      setViewMode('surface');
+    }
+
     n3d.isBuildingAnimated = true;
 
     const moduleKeys = ['hab_core_01', 'hab_solar_01', 'hab_pad_01', 'hab_berm_01', 'hab_isru_01'];
     const stepsInfo = [
-      { id: 'hab_core_01', msg: 'Deploying Hab Core 01: Geodesic dome pressurized & anchored.', icon: '🏠' },
+      { id: 'hab_core_01', msg: 'Deploying Hab Core 01: Geodesic dome pressurized on lunar regolith.', icon: '🏠' },
       { id: 'hab_solar_01', msg: 'Erecting Solar PV Farm: Bifacial panels oriented to polar sunlight.', icon: '☀️' },
       { id: 'hab_pad_01', msg: 'Sintering Touchdown Pad: Navigation approach beacons active.', icon: '🚀' },
       { id: 'hab_berm_01', msg: 'Constructing Regolith Blast Berm: Plume deflection barrier verified.', icon: '🛡️' },
       { id: 'hab_isru_01', msg: 'Connecting ISRU Plant: Volatiles sublimation cryogenic dewars online.', icon: '💧' },
     ];
 
-    // Reset scales
     moduleKeys.forEach(k => {
       if (n3d.modules[k]) {
         n3d.modules[k].scale.set(0.01, 0.01, 0.01);
-        n3d.modules[k].position.y = 120;
+        n3d.modules[k].position.y = 35;
       }
     });
 
@@ -1693,8 +1928,7 @@ function initNexus3DStudio() {
     function deployNext() {
       if (currentStep >= stepsInfo.length) {
         n3d.isBuildingAnimated = false;
-        showToast('All Lunar Base Infrastructure Online & Compliant!', '✓');
-        // Update all status badges to DEPLOYED
+        showToast('All Base Infrastructure Constructed on the Moon!', '✓');
         document.querySelectorAll('.mod-status-badge').forEach(badge => {
           badge.textContent = 'ONLINE';
           badge.style.background = 'rgba(46, 213, 115, 0.25)';
@@ -1708,13 +1942,12 @@ function initNexus3DStudio() {
       selectModule(step.id);
       showToast(step.msg, step.icon);
 
-      // Animate drop down
       if (modObj) {
         let t = 0;
         const animDrop = setInterval(() => {
           t += 0.08;
           const ease = Math.min(t, 1.0);
-          modObj.position.y = (1 - ease) * 120;
+          modObj.position.y = (1 - ease) * 35;
           const s = Math.min(ease * 1.05, 1.0);
           modObj.scale.set(s, s, s);
 
@@ -1723,19 +1956,19 @@ function initNexus3DStudio() {
             modObj.position.y = 0;
             modObj.scale.set(1, 1, 1);
             currentStep++;
-            setTimeout(deployNext, 700);
+            setTimeout(deployNext, 650);
           }
         }, 16);
       } else {
         currentStep++;
-        setTimeout(deployNext, 700);
+        setTimeout(deployNext, 650);
       }
     }
 
     deployNext();
   }
 
-  // 13. Lighting Sliders (Elevation & Azimuth)
+  // 14. Lighting Sliders (Elevation & Azimuth)
   const sliderElev = document.getElementById('sliderSunElevation');
   const valElev = document.getElementById('valSunElevation');
   const sliderAzim = document.getElementById('sliderSunAzimuth');
@@ -1757,13 +1990,13 @@ function initNexus3DStudio() {
     });
   }
 
-  // 14. Camera Viewpoint Presets
+  // 15. Camera Viewpoint Presets
   const CAM_PRESETS = {
-    free: { pos: [450, 320, 680], target: [370, 10, -335] },
-    core: { pos: [370, 45, -230], target: [370, 15, -335] },
-    solar: { pos: [420, 50, -560], target: [420, 20, -685] },
-    pad: { pos: [270, 75, 660], target: [270, 5, 815] },
-    top: { pos: [400, 1100, 0], target: [400, 0, 0] },
+    free: { mode: 'globe', pos: [0, 220, 920], target: [0, 0, 0] },
+    core: { mode: 'surface', pos: [boguCenter.x + 18, boguCenter.y + 22, boguCenter.z + 26], target: [boguCenter.x, boguCenter.y, boguCenter.z] },
+    solar: { mode: 'surface', pos: [boguCenter.x + 28, boguCenter.y + 20, boguCenter.z + 10], target: [boguCenter.x + 12, boguCenter.y, boguCenter.z - 15] },
+    pad: { mode: 'surface', pos: [boguCenter.x - 10, boguCenter.y + 25, boguCenter.z + 45], target: [boguCenter.x - 16, boguCenter.y, boguCenter.z + 22] },
+    top: { mode: 'globe', pos: [0, 950, 0], target: [0, 0, 0] },
   };
 
   document.querySelectorAll('.btn-cam-preset').forEach(btn => {
@@ -1773,14 +2006,13 @@ function initNexus3DStudio() {
       const camKey = btn.getAttribute('data-cam');
       const preset = CAM_PRESETS[camKey];
       if (preset && n3d.controls) {
-        n3d.camera.position.set(...preset.pos);
-        n3d.controls.target.set(...preset.target);
-        n3d.controls.update();
+        n3d.controls.autoRotate = false;
+        flyTo(new THREE.Vector3(...preset.pos), new THREE.Vector3(...preset.target), 1200);
       }
     });
   });
 
-  // 15. Blender MCP Server Status & Integration Pipeline
+  // 16. Blender MCP Server Status & Integration Pipeline
   async function checkBlenderMCPStatus() {
     const pill = document.getElementById('blenderStatusPill');
     const textEl = document.getElementById('mcpStatusText');
@@ -1809,7 +2041,6 @@ function initNexus3DStudio() {
     }
   }
 
-  // Poll Blender status every 8 seconds
   checkBlenderMCPStatus();
   setInterval(checkBlenderMCPStatus, 8000);
 
@@ -1819,7 +2050,7 @@ function initNexus3DStudio() {
     btnBuildMcp.addEventListener('click', async () => {
       btnBuildMcp.disabled = true;
       btnBuildMcp.innerHTML = '<span class="spinner" style="width:14px;height:14px;display:inline-block;margin-right:6px;"></span> Transmitting to Blender MCP...';
-      showToast('Transmitting procedural infrastructure scene to Blender MCP on port 9876...', '⚡');
+      showToast('Transmitting procedural spherical Moon scene to Blender MCP (Port 9876)...', '⚡');
 
       try {
         const res = await fetch('/api/nexus/blender/build', {
@@ -1829,8 +2060,7 @@ function initNexus3DStudio() {
         });
         const result = await res.json();
         if (result.success) {
-          showToast(`Success! Base constructed in Blender (${result.mode === 'mcp_socket' ? 'Socket 9876' : 'Headless Engine'})`, '✓');
-          // Refresh preview image
+          showToast(`Success! Spherical Moon Base constructed in Blender (${result.mode === 'mcp_socket' ? 'Socket 9876' : 'Headless Engine'})`, '✓');
           const modalImg = document.getElementById('blenderModalImg');
           if (modalImg) modalImg.src = `/outputs/nexus_3d/nexus_blender_digital_twin.png?t=${Date.now()}`;
         } else {
@@ -1865,7 +2095,6 @@ function initNexus3DStudio() {
           showToast(`Raytraced Digital Twin rendered successfully (${result.image_size_kb || 1500} KB)`, '✓');
           const modalImg = document.getElementById('blenderModalImg');
           if (modalImg) modalImg.src = `/outputs/nexus_3d/nexus_blender_digital_twin.png?t=${Date.now()}`;
-          // Open preview modal
           const modal = document.getElementById('blenderRenderModal');
           if (modal) modal.style.display = 'flex';
         } else {
@@ -1901,7 +2130,7 @@ function initNexus3DStudio() {
     btnDismissModal.addEventListener('click', () => { modal.style.display = 'none'; });
   }
 
-  // 16. Window Resize Handler
+  // 17. Window Resize Handler
   n3d.onResize = function() {
     const w = container.clientWidth || window.innerWidth;
     const h = container.clientHeight || (window.innerHeight - 64);
@@ -1913,7 +2142,7 @@ function initNexus3DStudio() {
   };
   window.addEventListener('resize', n3d.onResize);
 
-  // 17. Animation Render Loop
+  // 18. Animation Render Loop
   let roverT = 0;
   function animate() {
     n3d.animationFrameId = requestAnimationFrame(animate);
@@ -1922,7 +2151,7 @@ function initNexus3DStudio() {
       n3d.controls.update();
     }
 
-    // Gentle pulse on selected highlight ring
+    // Pulse highlight ring
     if (n3d.highlightRing && n3d.highlightRing.visible) {
       const pulse = 1 + Math.sin(Date.now() * 0.005) * 0.05;
       n3d.highlightRing.scale.set(pulse, pulse, 1);
@@ -1930,9 +2159,10 @@ function initNexus3DStudio() {
 
     // Move autonomous rover along transit path
     if (n3d.roverGroup) {
-      roverT += 0.0012;
-      const point = pipeCurve.getPoint(Math.sin(roverT) * 0.5 + 0.5);
-      n3d.roverGroup.position.set(point.x, point.y + 0.5, point.z);
+      roverT += 0.002;
+      const tNorm = Math.sin(roverT) * 0.5 + 0.5;
+      const point = pipeCurve.getPoint(tNorm);
+      n3d.roverGroup.position.set(point.x, point.y + 0.3, point.z);
     }
 
     n3d.renderer.render(n3d.scene, n3d.camera);

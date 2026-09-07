@@ -131,7 +131,22 @@ if bg:
     bg.inputs['Color'].default_value = (0.015, 0.018, 0.025, 1.0)
     bg.inputs['Strength'].default_value = 0.5
 
-# 2. Import 3D DEM Terrain Mesh
+# 2. Construct Complete Spherical Moon Lunar Model
+print("[Blender MCP] Creating Complete Spherical Moon Globe...")
+bpy.ops.mesh.primitive_uv_sphere_add(radius=1200.0, segments=64, ring_count=64, location=(0, 0, -1180.0))
+moon_sphere = bpy.context.active_object
+moon_sphere.name = "Celestial_Moon_Globe"
+
+# Lunar Regolith Material for Moon Globe
+mat_moon = bpy.data.materials.new(name="Lunar_Regolith_PBR")
+mat_moon.use_nodes = True
+m_bsdf = mat_moon.node_tree.nodes.get("Principled BSDF")
+if m_bsdf:
+    m_bsdf.inputs["Base Color"].default_value = (0.28, 0.29, 0.32, 1.0)
+    m_bsdf.inputs["Roughness"].default_value = 0.92
+moon_sphere.data.materials.append(mat_moon)
+
+# 3. Import 3D DEM Terrain Mesh for South Pole Boguslawsky Base Site
 obj_file = r"{str(obj_path)}"
 print(f"[Blender MCP] Loading Lunar DEM OBJ: {{obj_file}}")
 if hasattr(bpy.ops.wm, 'obj_import'):
@@ -141,18 +156,10 @@ else:
 
 terrain_obj = bpy.context.selected_objects[0]
 terrain_obj.name = "Lunar_Boguslawsky_DEM"
-terrain_obj.location = (0, 0, 1000.0)
+terrain_obj.location = (0, 0, 20.0) # Sited atop the lunar sphere surface
+terrain_obj.data.materials.append(mat_moon)
 
-# Lunar Regolith Material
-mat_regolith = bpy.data.materials.new(name="Lunar_Regolith_PBR")
-mat_regolith.use_nodes = True
-r_bsdf = mat_regolith.node_tree.nodes.get("Principled BSDF")
-if r_bsdf:
-    r_bsdf.inputs["Base Color"].default_value = (0.32, 0.33, 0.35, 1.0)
-    r_bsdf.inputs["Roughness"].default_value = 0.88
-terrain_obj.data.materials.append(mat_regolith)
-
-# 3. Collimated Grazing Lunar Sunlight (Polar Sun: 3.5 deg elevation, 124.5 deg azimuth)
+# 4. Collimated Grazing Lunar Sunlight (Polar Sun: 3.5 deg elevation, 124.5 deg azimuth)
 sun_data = bpy.data.lights.new(name="Polar_Sun_Light", type='SUN')
 sun_data.energy = 8.0
 sun_data.angle = math.radians(0.53) # Accurate solar disc angular diameter
@@ -161,7 +168,7 @@ sun_obj = bpy.data.objects.new(name="Polar_Sun_Light", object_data=sun_data)
 sun_obj.rotation_euler = (math.radians(86.5), math.radians(5.0), math.radians(124.5))
 bpy.context.collection.objects.link(sun_obj)
 
-# 4. Modular Infrastructure Construction
+# 5. Modular Infrastructure Construction on Lunar Surface
 layout_file = r"{str(layout_path)}"
 hab_core_target = None
 
