@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initMap();
   initSplitSlider();
   initModal();
+  initLightbox();
+  initPOC4Studio();
   await loadCatalogAndPairs();
 });
 
@@ -55,6 +57,15 @@ function initTabs() {
       }
     });
   });
+
+  // Check URL hash for direct tab linking (e.g. #poc4, #patches, #catalog, #map)
+  if (window.location.hash) {
+    const hash = window.location.hash.replace('#', '').toLowerCase();
+    const matchingTab = document.querySelector(`.nav-tab[data-tab="tab-${hash}"]`);
+    if (matchingTab) {
+      matchingTab.click();
+    }
+  }
 
   document.getElementById('btnRefreshCatalog').addEventListener('click', loadCatalogAndPairs);
 }
@@ -576,3 +587,248 @@ window.jumpToObservation = function(productId) {
   state.map.flyTo(obs.center, 7, { duration: 1.0 });
   displayObservationCard(obs);
 };
+
+// ==========================================================================
+// POC 4: Illumination & Scale Robustness Studio
+// ==========================================================================
+function initLightbox() {
+  const modal = document.getElementById('imagePreviewModal');
+  const modalImg = document.getElementById('previewModalImg');
+  const modalTitle = document.getElementById('previewModalTitle');
+  const btnClose = document.getElementById('btnClosePreviewModal');
+
+  if (!modal) return;
+
+  document.querySelectorAll('.img-preview-trigger').forEach(img => {
+    img.addEventListener('click', () => {
+      const src = img.getAttribute('src');
+      const title = img.getAttribute('data-title') || 'Figure Preview';
+      modalImg.src = src;
+      modalTitle.innerText = title;
+      modal.classList.add('show');
+      modal.style.display = 'flex';
+    });
+  });
+
+  const closeModal = () => {
+    modal.classList.remove('show');
+    modal.style.display = 'none';
+  };
+
+  if (btnClose) btnClose.addEventListener('click', closeModal);
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+}
+
+function initPOC4Studio() {
+  const btnRun = document.getElementById('btnRunPOC4Experiment');
+  if (!btnRun) return;
+
+  btnRun.addEventListener('click', runPOC4FullPipeline);
+
+  // Load existing results if available
+  loadPOC4Results();
+}
+
+async function loadPOC4Results() {
+  try {
+    const res = await fetch('/api/poc4/results');
+    if (res.ok) {
+      const data = await res.json();
+      updatePOC4UI(data);
+    }
+  } catch (e) {
+    console.log('POC-4 cached results not available yet.');
+  }
+}
+
+async function runPOC4FullPipeline() {
+  const btnRun = document.getElementById('btnRunPOC4Experiment');
+  const progressCard = document.getElementById('poc4ProgressCard');
+  const progressBar = document.getElementById('poc4ProgressBar');
+  const stepLabel = document.getElementById('poc4CurrentStep');
+  const stepBadges = document.querySelectorAll('#poc4StepsFlow .step-badge');
+
+  btnRun.disabled = true;
+  btnRun.innerHTML = `
+    <span class="spinner" style="width: 14px; height: 14px; border-width: 2px; display: inline-block;"></span>
+    Running Experiment Matrix...
+  `;
+  progressCard.style.display = 'flex';
+
+  const steps = [
+    { name: '1. Ingesting Real Geographic Base Patch...', percent: 12, index: 0 },
+    { name: '2. Applying 8 Illumination Transformations...', percent: 25, index: 1 },
+    { name: '3. Computing Shadow Morphological Masks...', percent: 38, index: 2 },
+    { name: '4. Generating 4-Octave Multi-Scale Pyramids...', percent: 50, index: 3 },
+    { name: '5. Extracting Spatial Gradient Features...', percent: 62, index: 4 },
+    { name: '6. Nearest-Neighbor Lowe Ratio Matching...', percent: 74, index: 5 },
+    { name: '7. Executing RANSAC Geometric Verification...', percent: 85, index: 6 },
+    { name: '8. Computing Ground Truth Recall@K & Inlier Metrics...', percent: 93, index: 7 },
+    { name: '9. Generating Publication-Quality Figures & CSV...', percent: 100, index: 8 }
+  ];
+
+  let currentStepIdx = 0;
+  const progressTimer = setInterval(() => {
+    if (currentStepIdx < steps.length) {
+      const s = steps[currentStepIdx];
+      stepLabel.innerText = s.name;
+      progressBar.style.width = `${s.percent}%`;
+      
+      stepBadges.forEach((b, idx) => {
+        if (idx < currentStepIdx) {
+          b.className = 'step-badge completed';
+        } else if (idx === currentStepIdx) {
+          b.className = 'step-badge active';
+        } else {
+          b.className = 'step-badge';
+        }
+      });
+      currentStepIdx++;
+    }
+  }, 450);
+
+  try {
+    const res = await fetch('/api/poc4/run', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        source_product_id: 'ch2_ohr_ncp_20260103t1005176450_d_img_d18',
+        reference_product_id: 'SYNTHETIC_LROC_CANDIDATE_P850S0250',
+        fast_mode: false
+      })
+    });
+
+    clearInterval(progressTimer);
+
+    if (res.ok) {
+      const data = await res.json();
+      progressBar.style.width = '100%';
+      stepLabel.innerText = 'Experiment Completed Successfully!';
+      stepBadges.forEach(b => b.className = 'step-badge completed');
+      
+      setTimeout(() => {
+        updatePOC4UI(data);
+        refreshFigureImages();
+        progressCard.style.display = 'none';
+      }, 800);
+    } else {
+      const err = await res.text();
+      alert('POC-4 Experiment run error: ' + err);
+    }
+  } catch (err) {
+    clearInterval(progressTimer);
+    console.error('POC-4 execution failure:', err);
+    alert('Failed to connect to POC-4 experiment service: ' + err);
+  } finally {
+    btnRun.disabled = false;
+    btnRun.innerHTML = `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      RUN POC-4 EXPERIMENT
+    `;
+  }
+}
+
+function refreshFigureImages() {
+  const t = Date.now();
+  document.querySelectorAll('.gallery-img-box img').forEach(img => {
+    const base = img.src.split('?')[0];
+    img.src = `${base}?t=${t}`;
+  });
+}
+
+function updatePOC4UI(data) {
+  if (!data) return;
+
+  // Update Provenance label
+  if (data.metadata?.data_provenance) {
+    const provLabel = document.getElementById('poc4ProvenanceLabel');
+    if (provLabel) provLabel.innerText = data.metadata.data_provenance;
+  }
+
+  // Update Scorecards
+  if (data.summary) {
+    const s = data.summary;
+    const bestRep = s.best_representation || 'MULTI-SCALE + ILLUMINATION-AWARE';
+    const repData = s.representation_metrics ? s.representation_metrics[bestRep] : null;
+
+    const elBestRep = document.getElementById('poc4BestRep');
+    if (elBestRep) elBestRep.innerText = bestRep;
+
+    if (repData) {
+      const elSuccess = document.getElementById('poc4SuccessRate');
+      if (elSuccess) elSuccess.innerText = `${(repData.success_rate * 100).toFixed(1)}%`;
+
+      const elInlier = document.getElementById('poc4InlierRatio');
+      if (elInlier) elInlier.innerText = `${(repData.mean_inlier_ratio * 100).toFixed(1)}%`;
+
+      const elRecall1 = document.getElementById('poc4Recall1');
+      if (elRecall1) elRecall1.innerText = `${(repData.mean_recall_1 * 100).toFixed(1)}%`;
+
+      const elRmse = document.getElementById('poc4Rmse');
+      if (elRmse) elRmse.innerText = `${repData.mean_rmse.toFixed(2)} px`;
+    }
+  }
+
+  // Populate Baseline Comparison Table
+  if (data.summary?.representation_metrics) {
+    const tbody = document.getElementById('poc4ComparisonTableBody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      const reps = data.summary.representation_metrics;
+      for (const [repName, m] of Object.entries(reps)) {
+        const tr = document.createElement('tr');
+        const isBest = repName.includes('MULTI-SCALE') && repName.includes('ILLUMINATION');
+        if (isBest) tr.className = 'highlight-row';
+
+        let pillClass = 'pill-fail';
+        let pillText = 'Baseline';
+        if (m.success_rate >= 0.7) {
+          pillClass = isBest ? 'pill-winner' : 'pill-pass';
+          pillText = isBest ? '★ BEST PERFORMER' : 'High Robustness';
+        } else if (m.success_rate >= 0.5) {
+          pillClass = 'pill-pass';
+          pillText = 'Scale Invariant';
+        } else if (m.success_rate >= 0.2) {
+          pillClass = 'pill-neutral';
+          pillText = 'Partial';
+        }
+
+        tr.innerHTML = `
+          <td><strong>${repName}</strong></td>
+          <td>${(m.success_rate * 100).toFixed(1)}%</td>
+          <td>${(m.mean_inlier_ratio * 100).toFixed(1)}%</td>
+          <td>${(m.mean_recall_1 * 100).toFixed(1)}%</td>
+          <td>${m.mean_rmse.toFixed(2)} px</td>
+          <td><span class="${pillClass}">${pillText}</span></td>
+        `;
+        tbody.appendChild(tr);
+      }
+    }
+  }
+
+  // Populate Ablation Table
+  if (data.ablation) {
+    const tbody = document.getElementById('poc4AblationTableBody');
+    if (tbody && Array.isArray(data.ablation)) {
+      tbody.innerHTML = '';
+      data.ablation.forEach(row => {
+        const tr = document.createElement('tr');
+        const isPass = row.success;
+        const isBest = row.config_name.includes('ILLUMINATION-AWARE') && row.scale_harmonized;
+        if (isBest) tr.className = 'highlight-row';
+
+        tr.innerHTML = `
+          <td>${row.config_name}</td>
+          <td>${row.scale_harmonized ? 'Yes' : 'No'}</td>
+          <td>${(row.inlier_ratio * 100).toFixed(1)}%</td>
+          <td>${row.rmse < 900 ? row.rmse.toFixed(2) + ' px' : '999.00 px'}</td>
+          <td><span class="${isBest ? 'pill-winner' : (isPass ? 'pill-pass' : 'pill-fail')}">${isPass ? 'PASS' : 'FAIL'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  }
+}
+

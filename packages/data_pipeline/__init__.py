@@ -46,6 +46,52 @@ from .visualization import (
     generate_overlap_visualization,
     generate_patch_comparison_visualization,
 )
+from .illumination_robustness import (
+    generate_raw_image,
+    generate_normalized_image,
+    generate_gradient_image,
+    generate_edge_image,
+    generate_illumination_normalized_image,
+    generate_shadow_mask,
+    apply_synthetic_illumination_perturbation,
+)
+from .scale_robustness import (
+    PyramidLevel,
+    calculate_gsd_ratio,
+    resample_to_gsd,
+    build_image_pyramid,
+    build_multiscale_representation_dict,
+    apply_synthetic_scale_perturbation,
+)
+from .poc4_matching import (
+    Keypoint,
+    KeypointMatch,
+    RegistrationResult,
+    detect_keypoints,
+    extract_descriptors,
+    match_features,
+    estimate_affine_ransac,
+    run_classical_registration,
+)
+from .poc4_metrics import (
+    calculate_recall_at_k,
+    calculate_inlier_ratio,
+    calculate_registration_rmse,
+    calculate_alignment_success,
+    calculate_improvement_deltas,
+    FailureCaseTracker,
+)
+from .poc4_experiment import (
+    POC4ExperimentRunner,
+)
+from .poc4_visualization import (
+    generate_illumination_comparison_figure,
+    generate_scale_pyramid_figure,
+    generate_registration_comparison_figure,
+    generate_metrics_comparison_figure,
+    generate_illumination_scale_heatmap_figure,
+    generate_ablation_results_figure,
+)
 
 __all__ = [
     "SensorType",
@@ -77,4 +123,40 @@ __all__ = [
     "find_overlapping_reference_tiles",
     "generate_overlap_visualization",
     "generate_patch_comparison_visualization",
+    # POC-4 Illumination & Scale Robustness
+    "generate_raw_image",
+    "generate_normalized_image",
+    "generate_gradient_image",
+    "generate_edge_image",
+    "generate_illumination_normalized_image",
+    "generate_shadow_mask",
+    "apply_synthetic_illumination_perturbation",
+    "PyramidLevel",
+    "calculate_gsd_ratio",
+    "resample_to_gsd",
+    "build_image_pyramid",
+    "build_multiscale_representation_dict",
+    "apply_synthetic_scale_perturbation",
+    "Keypoint",
+    "KeypointMatch",
+    "RegistrationResult",
+    "detect_keypoints",
+    "extract_descriptors",
+    "match_features",
+    "estimate_affine_ransac",
+    "run_classical_registration",
+    "calculate_recall_at_k",
+    "calculate_inlier_ratio",
+    "calculate_registration_rmse",
+    "calculate_alignment_success",
+    "calculate_improvement_deltas",
+    "FailureCaseTracker",
+    "POC4ExperimentRunner",
+    "generate_illumination_comparison_figure",
+    "generate_scale_pyramid_figure",
+    "generate_registration_comparison_figure",
+    "generate_metrics_comparison_figure",
+    "generate_illumination_scale_heatmap_figure",
+    "generate_ablation_results_figure",
 ]
+

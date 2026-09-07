@@ -89,6 +89,47 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 })
             return
 
+        # 3b. API: POC 4 Results JSON
+        if path == "/api/poc4/results":
+            results_path = PROJECT_ROOT / "outputs" / "poc4" / "results.json"
+            if results_path.exists():
+                with open(results_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "POC 4 results not found. Run scripts/demo_poc4.py")
+            return
+
+        # 3c. API: POC 4 Demo Summary & Visualizations
+        if path == "/api/poc4/demo":
+            meta_path = PROJECT_ROOT / "outputs" / "poc4" / "poc4_metadata.json"
+            results_path = PROJECT_ROOT / "outputs" / "poc4" / "results.json"
+            if meta_path.exists() and results_path.exists():
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    meta_data = json.load(f)
+                with open(results_path, "r", encoding="utf-8") as f:
+                    results_data = json.load(f)
+                
+                resp = {
+                    "metadata": meta_data,
+                    "best_performing_representation": results_data.get("best_performing_representation", "MULTI-SCALE + ILLUMINATION-AWARE"),
+                    "statistical_summary": results_data.get("statistical_summary", {}),
+                    "matrix_results": results_data.get("matrix_results", []),
+                    "ablation_results": results_data.get("ablation_results", []),
+                    "failure_summary": results_data.get("failure_summary", {}),
+                    "figures": {
+                        "illumination_comparison": "/outputs/poc4/illumination_comparison.png",
+                        "scale_pyramid": "/outputs/poc4/scale_pyramid.png",
+                        "registration_comparison": "/outputs/poc4/registration_comparison.png",
+                        "metrics_comparison": "/outputs/poc4/metrics_comparison.png",
+                        "illumination_scale_heatmap": "/outputs/poc4/illumination_scale_heatmap.png",
+                        "ablation_results": "/outputs/poc4/ablation_results.png",
+                    }
+                }
+                self.send_json_response(resp)
+            else:
+                self.send_error(404, "POC 4 demo artifacts not generated yet. Run scripts/demo_poc4.py")
+            return
+
         # 4. Static Frontend Routing
         if path == "/" or path == "/index.html":
             self.serve_file(WEB_DIR / "index.html", "text/html")
@@ -119,7 +160,21 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 self.send_error(500, f"Extraction failed: {str(e)}")
             return
 
+        if path == "/api/poc4/run":
+            try:
+                from scripts.demo_poc4 import main as run_demo_main
+                logger.info("Triggering POC-4 Experiment Run via Web API...")
+                run_demo_main()
+                results_path = PROJECT_ROOT / "outputs" / "poc4" / "results.json"
+                with open(results_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            except Exception as e:
+                logger.error(f"POC-4 execution error: {e}", exc_info=True)
+                self.send_error(500, f"POC-4 run failed: {str(e)}")
+            return
+
         self.send_error(404, "Endpoint not found")
+
 
     def get_catalog_data(self):
         catalog = LunarDataCatalog(catalog_file=DATA_DIR / "catalog.json")
