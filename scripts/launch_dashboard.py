@@ -367,14 +367,32 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
 
 
 def run_server(port: int = 8000, open_browser: bool = True):
-    server_address = ("", port)
-    httpd = ThreadingHTTPServer(server_address, NexusDashboardHandler)
+    ThreadingHTTPServer.allow_reuse_address = True
+    actual_port = port
+    httpd = None
 
-    url = f"http://localhost:{port}"
+    # Try requested port or auto-fallback to next available ports
+    for p in range(port, port + 20):
+        try:
+            server_address = ("", p)
+            httpd = ThreadingHTTPServer(server_address, NexusDashboardHandler)
+            actual_port = p
+            break
+        except OSError as e:
+            if e.errno == 48: # Address already in use
+                logger.warning(f"Port {p} is currently in use. Trying port {p + 1}...")
+                continue
+            raise
+
+    if httpd is None:
+        print(f"[!] Unable to bind server to any port in range {port} - {port + 20}.")
+        sys.exit(1)
+
+    url = f"http://localhost:{actual_port}"
     print(f"\n=======================================================")
     print(f"  NEXUS-LUNAR: Lunar Intelligence & Studio Dashboard")
     print(f"  Local URL:  {url}")
-    print(f"  Features:   Lunar GIS Map | POC 2 Patch Studio | Catalog")
+    print(f"  Features:   3D Space Studio | Blender MCP | GIS Map")
     print(f"=======================================================\n")
 
     if open_browser:
