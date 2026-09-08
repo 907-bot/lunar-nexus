@@ -219,6 +219,113 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 self.send_error(404, "POC 6 demo artifacts not generated yet. Run scripts/demo_poc6.py")
             return
 
+        # 3h. API: POC 7 Spatial Knowledge Graph
+        if path == "/api/poc7/graph":
+            kg_path = PROJECT_ROOT / "outputs" / "poc7" / "poc7_knowledge_graph.json"
+            if kg_path.exists():
+                with open(kg_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "POC 7 Knowledge Graph not found. Run scripts/demo_poc7.py")
+            return
+
+        # 3i. API: POC 7 Terrain Intelligence
+        if path == "/api/poc7/terrain":
+            t_path = PROJECT_ROOT / "outputs" / "poc7" / "poc7_terrain_intelligence.json"
+            if t_path.exists():
+                with open(t_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "POC 7 Terrain Intelligence not found. Run scripts/demo_poc7.py")
+            return
+
+        # 3j. API: POC 7 Illumination Intelligence
+        if path == "/api/poc7/illumination":
+            i_path = PROJECT_ROOT / "outputs" / "poc7" / "poc7_illumination_intelligence.json"
+            if i_path.exists():
+                with open(i_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "POC 7 Illumination Intelligence not found. Run scripts/demo_poc7.py")
+            return
+
+        # 3k. API: POC 7 Resource Indicators
+        if path == "/api/poc7/resources":
+            r_path = PROJECT_ROOT / "outputs" / "poc7" / "poc7_resource_indicators.json"
+            if r_path.exists():
+                with open(r_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "POC 7 Resource Indicators not found. Run scripts/demo_poc7.py")
+            return
+
+        # 3l. API: POC 7 Hazards
+        if path == "/api/poc7/hazards":
+            h_path = PROJECT_ROOT / "outputs" / "poc7" / "poc7_hazard_intelligence.json"
+            if h_path.exists():
+                with open(h_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "POC 7 Hazard Intelligence not found. Run scripts/demo_poc7.py")
+            return
+
+        # 3m. API: POC 7 Candidate Sites
+        if path == "/api/poc7/sites":
+            s_path = PROJECT_ROOT / "outputs" / "poc7" / "poc7_candidate_sites.json"
+            if s_path.exists():
+                with open(s_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "POC 7 Candidate Sites not found. Run scripts/demo_poc7.py")
+            return
+
+        # 3n. API: POC 7 Demo Summary & Figures
+        if path == "/api/poc7/demo":
+            poc7_dir = PROJECT_ROOT / "outputs" / "poc7"
+            kg_path = poc7_dir / "poc7_knowledge_graph.json"
+            sites_path = poc7_dir / "poc7_candidate_sites.json"
+            meta_path = poc7_dir / "poc7_metadata.json"
+            handover_path = poc7_dir / "poc7_handover_for_poc8.json"
+
+            if kg_path.exists() and sites_path.exists():
+                with open(kg_path, "r", encoding="utf-8") as f:
+                    kg_data = json.load(f)
+                with open(sites_path, "r", encoding="utf-8") as f:
+                    sites_data = json.load(f)
+                meta_data = {}
+                if meta_path.exists():
+                    with open(meta_path, "r", encoding="utf-8") as f:
+                        meta_data = json.load(f)
+                handover_data = {}
+                if handover_path.exists():
+                    with open(handover_path, "r", encoding="utf-8") as f:
+                        handover_data = json.load(f)
+
+                resp = {
+                    "metadata": meta_data,
+                    "total_nodes": kg_data.get("total_nodes", 0),
+                    "total_edges": kg_data.get("total_edges", 0),
+                    "node_type_breakdown": kg_data.get("node_type_breakdown", {}),
+                    "relationship_type_breakdown": kg_data.get("relationship_type_breakdown", {}),
+                    "candidate_sites": sites_data,
+                    "top_candidate": sites_data[0] if sites_data else None,
+                    "handover": handover_data,
+                    "figures": {
+                        "knowledge_graph": "/outputs/poc7/knowledge_graph_overview.png",
+                        "terrain_intelligence": "/outputs/poc7/terrain_intelligence_map.png",
+                        "slope_analysis": "/outputs/poc7/slope_analysis_map.png",
+                        "illumination_shadow": "/outputs/poc7/illumination_shadow_map.png",
+                        "hazard_intelligence": "/outputs/poc7/hazard_intelligence_map.png",
+                        "resource_indicator": "/outputs/poc7/resource_indicator_map.png",
+                        "candidate_site_suitability": "/outputs/poc7/candidate_site_suitability_map.png",
+                        "candidate_site_explanation": "/outputs/poc7/candidate_site_explanation.png",
+                    }
+                }
+                self.send_json_response(resp)
+            else:
+                self.send_error(404, "POC 7 demo artifacts not generated yet. Run scripts/demo_poc7.py")
+            return
+
         # 4. Static Frontend Routing
         if path == "/" or path == "/index.html":
             self.serve_file(WEB_DIR / "index.html", "text/html")
@@ -288,6 +395,30 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 self.send_error(500, f"POC-6 run failed: {str(e)}")
             return
 
+        if path in ("/api/poc7/run", "/api/poc7/analyze"):
+            try:
+                from scripts.demo_poc7 import run_poc7_demo
+                logger.info("Triggering POC-7 Spatial Intelligence Run via Web API...")
+                run_poc7_demo()
+                poc7_dir = PROJECT_ROOT / "outputs" / "poc7"
+                kg_path = poc7_dir / "poc7_knowledge_graph.json"
+                sites_path = poc7_dir / "poc7_candidate_sites.json"
+                with open(kg_path, "r", encoding="utf-8") as f:
+                    kg_data = json.load(f)
+                with open(sites_path, "r", encoding="utf-8") as f:
+                    sites_data = json.load(f)
+                resp = {
+                    "status": "SUCCESS",
+                    "total_nodes": kg_data.get("total_nodes", 0),
+                    "total_edges": kg_data.get("total_edges", 0),
+                    "candidate_sites_count": len(sites_data),
+                    "candidate_sites": sites_data,
+                }
+                self.send_json_response(resp)
+            except Exception as e:
+                logger.error(f"POC-7 execution error: {e}", exc_info=True)
+                self.send_error(500, f"POC-7 run failed: {str(e)}")
+            return
 
         self.send_error(404, "Endpoint not found")
 

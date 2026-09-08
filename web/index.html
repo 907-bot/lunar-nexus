@@ -51,6 +51,11 @@
           POC 6 Geometric XAI
           <span class="badge-pulse" id="poc6Badge" style="background: linear-gradient(135deg, #00f2fe, #4facfe);">GEOMETRIC XAI</span>
         </button>
+        <button class="nav-tab" data-tab="tab-poc7" id="tabBtnPOC7">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
+          POC 7 Spatial Intelligence
+          <span class="badge-pulse" id="poc7Badge" style="background: linear-gradient(135deg, #00b894, #00cec9);">KNOWLEDGE GRAPH</span>
+        </button>
         <button class="nav-tab" data-tab="tab-catalog" id="tabBtnCatalog">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
           Catalog Index
@@ -1007,8 +1012,273 @@
         </div>
       </section>
 
+      <!-- TAB 5: POC 7 Spatial Intelligence Studio -->
+      <section class="tab-pane" id="tab-poc7">
+        <div class="poc7-workspace">
+          <!-- Top Studio Header -->
+          <div class="poc-header-card glassmorphism">
+            <div class="poc-header-info">
+              <div class="poc-tagline">
+                <span class="badge-accent" style="background: linear-gradient(135deg, #00b894, #00cec9);">KNOWLEDGE GRAPH & MULTI-CRITERIA DECISION ANALYSIS</span>
+                <span class="tag-pill">Boguslawsky Lunar South Pole (-72.9° Lat, 43.2° Lon)</span>
+              </div>
+              <h2 class="poc-title">POC 7 — NEXUS SPATIAL INTELLIGENCE</h2>
+              <p class="poc-desc">
+                Transform registered lunar observations into structured lunar spatial knowledge. Traverses:
+                <strong>Registered Observations → Spatial Knowledge Graph → Terrain Intelligence → Illumination & Solar Potential → Mineralogical Indicators → Hazard Constraints → Candidate Site Suitability</strong>.
+              </p>
+            </div>
+            <div class="poc-header-actions">
+              <button class="btn-primary" id="btnPOC7ExploreGraph">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                Explore Graph
+              </button>
+              <button class="btn-secondary" id="btnPOC7AnalyzeTerrain">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                Analyze Terrain
+              </button>
+              <button class="btn-secondary" id="btnPOC7AnalyzeIllum">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line></svg>
+                Analyze Illumination
+              </button>
+              <button class="btn-secondary" id="btnPOC7FindSites">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                Find Candidate Sites
+              </button>
+              <button class="btn-accent" id="btnRunPOC7Pipeline">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                Re-Run Pipeline
+              </button>
+            </div>
+          </div>
 
-  <!-- Image Enlargement Lightbox Modal -->
+          <!-- KPI Metric Strip -->
+          <div class="kpi-strip">
+            <div class="kpi-metric-card glassmorphism">
+              <div class="kpi-label">Graph Nodes</div>
+              <div class="kpi-value text-accent" id="poc7KpiNodes">--</div>
+              <div class="kpi-sub" id="poc7KpiNodeTypes">12 Entity Classes</div>
+            </div>
+            <div class="kpi-metric-card glassmorphism">
+              <div class="kpi-label">Graph Relationships</div>
+              <div class="kpi-value text-cyan" id="poc7KpiEdges">--</div>
+              <div class="kpi-sub" id="poc7KpiEdgeTypes">Typed Provenance Edges</div>
+            </div>
+            <div class="kpi-metric-card glassmorphism">
+              <div class="kpi-label">Candidate Sites</div>
+              <div class="kpi-value text-green" id="poc7KpiSites">--</div>
+              <div class="kpi-sub">Multi-Factor Ranked</div>
+            </div>
+            <div class="kpi-metric-card glassmorphism">
+              <div class="kpi-label">Identified Hazards</div>
+              <div class="kpi-value text-amber" id="poc7KpiHazards">--</div>
+              <div class="kpi-sub">Topographic & Lighting</div>
+            </div>
+            <div class="kpi-metric-card glassmorphism">
+              <div class="kpi-label">POC-8 Handover</div>
+              <div class="kpi-value text-purple" id="poc7KpiHandover">READY</div>
+              <div class="kpi-sub">Habitat Digital Twin</div>
+            </div>
+          </div>
+
+          <!-- Main Interactive Studio Grid -->
+          <div class="poc7-grid">
+            <!-- Left Column: Spatial Knowledge Graph & Queries -->
+            <div class="poc7-col-left">
+              <!-- Knowledge Graph Card -->
+              <div class="panel-card glassmorphism" id="cardKnowledgeGraph">
+                <div class="card-header">
+                  <div class="card-title-group">
+                    <h3>Spatial Knowledge Graph</h3>
+                    <span class="tag-pill" id="poc7GraphStatus">Offline-First Engine</span>
+                  </div>
+                  <button class="btn-icon" id="btnPreviewGraphFig" title="Enlarge Graph Diagram">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="graph-figure-container">
+                    <img id="poc7GraphFig" src="/outputs/poc7/knowledge_graph_overview.png" alt="Spatial Knowledge Graph Overview" class="img-responsive gallery-preview-img">
+                  </div>
+                  <div class="node-badges-strip" id="poc7NodeBadges">
+                    <!-- Dynamic badges populated by JS -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interactive Graph Query Runner -->
+              <div class="panel-card glassmorphism">
+                <div class="card-header">
+                  <h3>Graph Intelligence Queries</h3>
+                  <span class="tag-pill">Sub-Graph Filters</span>
+                </div>
+                <div class="card-body">
+                  <div class="form-row">
+                    <label>Query Template</label>
+                    <select id="poc7QuerySelect" class="input-select">
+                      <option value="corrs" selected>Find Verified Registered Correspondences (POC-6 Inliers)</option>
+                      <option value="candidates">Find Candidate Sites (Slope <= 15°, Suitability >= 0.45)</option>
+                      <option value="illuminated">Find Illuminated Terrain Patches</option>
+                      <option value="resources">Find Patches with Mineralogical Indicators</option>
+                      <option value="hazards">Find Hazards Constraining Candidate Sites</option>
+                    </select>
+                  </div>
+                  <div class="query-results-box" id="poc7QueryResultsBox">
+                    <div class="placeholder-text">Executing query...</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Column: Terrain, Illumination, Resources, Hazards, Candidate Sites -->
+            <div class="poc7-col-right">
+              <!-- Topographic & Terrain Intelligence Card -->
+              <div class="panel-card glassmorphism" id="cardTerrain">
+                <div class="card-header">
+                  <div class="card-title-group">
+                    <h3>Topographic & Terrain Intelligence</h3>
+                    <span class="tag-pill">Horn's Method Gradient</span>
+                  </div>
+                  <button class="btn-icon" id="btnPreviewTerrainFig" title="Enlarge Terrain Figure">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="two-col-grid">
+                    <div class="figure-thumb">
+                      <img id="poc7TerrainFig" src="/outputs/poc7/terrain_intelligence_map.png" alt="Terrain Intelligence Map" class="img-responsive gallery-preview-img">
+                    </div>
+                    <div class="figure-thumb">
+                      <img id="poc7SlopeFig" src="/outputs/poc7/slope_analysis_map.png" alt="Slope Analysis Map" class="img-responsive gallery-preview-img">
+                    </div>
+                  </div>
+                  <div class="metrics-summary-table" id="poc7TerrainTable">
+                    <!-- Dynamic terrain metric rows -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Illumination & Resource Indicator Row -->
+              <div class="two-card-row">
+                <!-- Illumination Card -->
+                <div class="panel-card glassmorphism" id="cardIllum">
+                  <div class="card-header">
+                    <h3>Illumination & Solar Potential</h3>
+                    <button class="btn-icon" id="btnPreviewIllumFig" title="Enlarge Illumination Figure">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                    </button>
+                  </div>
+                  <div class="card-body">
+                    <div class="figure-thumb">
+                      <img id="poc7IllumFig" src="/outputs/poc7/illumination_shadow_map.png" alt="Illumination Map" class="img-responsive gallery-preview-img">
+                    </div>
+                    <div class="illum-status-box" id="poc7IllumStatusBox">
+                      <!-- Dynamic illumination statuses -->
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Resource Indicator Card -->
+                <div class="panel-card glassmorphism" id="cardResources">
+                  <div class="card-header">
+                    <h3>Mineralogical & Resource Indicators</h3>
+                    <button class="btn-icon" id="btnPreviewResourceFig" title="Enlarge Resource Figure">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                    </button>
+                  </div>
+                  <div class="card-body">
+                    <div class="figure-thumb">
+                      <img id="poc7ResourceFig" src="/outputs/poc7/resource_indicator_map.png" alt="Resource Indicator Map" class="img-responsive gallery-preview-img">
+                    </div>
+                    <div class="scientific-disclaimer-box">
+                      <div class="disclaimer-header">SCIENTIFIC QUALIFICATION NOTICE</div>
+                      <p>Features represent uncalibrated spectral absorption band depth indicators (OH/H2O proxy), NOT confirmed mineable deposits or extractable volatile reserves.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hazard Intelligence Card -->
+              <div class="panel-card glassmorphism" id="cardHazards">
+                <div class="card-header">
+                  <div class="card-title-group">
+                    <h3>Spatial Hazard Intelligence</h3>
+                    <span class="tag-pill text-amber">Operational Mobility Risk</span>
+                  </div>
+                  <button class="btn-icon" id="btnPreviewHazardFig" title="Enlarge Hazard Figure">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="figure-thumb">
+                    <img id="poc7HazardFig" src="/outputs/poc7/hazard_intelligence_map.png" alt="Hazard Intelligence Map" class="img-responsive gallery-preview-img">
+                  </div>
+                  <div class="hazards-list" id="poc7HazardsList">
+                    <!-- Dynamic hazard cards -->
+                  </div>
+                </div>
+              </div>
+
+              <!-- Candidate Site Intelligence Table -->
+              <div class="panel-card glassmorphism" id="cardCandidateSites">
+                <div class="card-header">
+                  <div class="card-title-group">
+                    <h3>Candidate Site Spatial Suitability Ranking</h3>
+                    <span class="tag-pill text-green">Multi-Factor MCDA</span>
+                  </div>
+                  <button class="btn-icon" id="btnPreviewSuitabilityFig" title="Enlarge Suitability Figure">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 3 21 3 21 9"></polyline><polyline points="9 21 3 21 3 15"></polyline><line x1="21" y1="3" x2="14" y2="10"></line><line x1="3" y1="21" x2="10" y2="14"></line></svg>
+                  </button>
+                </div>
+                <div class="card-body">
+                  <div class="candidate-sites-table-container">
+                    <table class="data-table" id="poc7CandidateSitesTable">
+                      <thead>
+                        <tr>
+                          <th>Rank</th>
+                          <th>Site ID</th>
+                          <th>Patch ID</th>
+                          <th>Centroid (Lat, Lon)</th>
+                          <th>Terrain</th>
+                          <th>Illumination</th>
+                          <th>Resource</th>
+                          <th>Haz Penalty</th>
+                          <th>Suitability</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="poc7CandidateSitesTbody">
+                        <!-- Populated dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Candidate Site Explanation Modal -->
+      <div class="modal-backdrop" id="siteExplanationModal" style="display: none;">
+        <div class="modal-dialog modal-lg glassmorphism">
+          <div class="modal-header">
+            <h3 id="modalSiteTitle">Candidate Site Spatial Intelligence Rationale</h3>
+            <button class="btn-close" id="btnCloseSiteModal">&times;</button>
+          </div>
+          <div class="modal-body" id="modalSiteBody">
+            <div class="two-col-grid">
+              <div class="figure-thumb">
+                <img id="modalRadarFig" src="/outputs/poc7/candidate_site_explanation.png" alt="Candidate Site Radar Scorecard" class="img-responsive gallery-preview-img">
+              </div>
+              <div class="site-explanation-content" id="modalSiteTextContent">
+                <!-- Explanations populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
   <div class="modal-backdrop" id="imagePreviewModal" style="display: none;">
     <div class="modal-dialog modal-lg glassmorphism">
       <div class="modal-header">

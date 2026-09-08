@@ -144,6 +144,50 @@ from .poc6_visualization import (
     plot_xai_rejection_reasons_breakdown,
     generate_all_poc6_visualizations,
 )
+from .poc7_models import (
+    NodeType,
+    RelationType,
+    SlopeCategory,
+    IlluminationStatus,
+    HazardType,
+    HazardSeverity,
+    SiteDataStatus,
+    ProvenanceRecord,
+    GraphNode,
+    GraphEdge,
+    TerrainMetrics,
+    IlluminationMetrics,
+    ResourceIndicator,
+    HazardIndicator,
+    CandidateSiteExplanation,
+    CandidateSite,
+    POC7Handover,
+)
+from .poc7_knowledge_graph import (
+    SpatialKnowledgeGraph,
+)
+from .poc7_terrain import (
+    TerrainIntelligenceEngine,
+    KNOWN_LUNAR_CRATERS,
+)
+from .poc7_illumination import (
+    IlluminationIntelligenceEngine,
+)
+from .poc7_resources import (
+    ResourceIntelligenceEngine,
+)
+from .poc7_hazards import (
+    HazardIntelligenceEngine,
+)
+from .poc7_site_intelligence import (
+    CandidateSiteScoringEngine,
+)
+from .poc7_visualization import (
+    POC7Visualizer,
+)
+from .poc7_experiment import (
+    POC7ExperimentRunner,
+)
 
 __all__ = [
     "SensorType",
@@ -248,7 +292,31 @@ __all__ = [
     "plot_accepted_vs_rejected_scatter",
     "plot_xai_rejection_reasons_breakdown",
     "generate_all_poc6_visualizations",
+    # POC-7 Spatial Intelligence
+    "NodeType",
+    "RelationType",
+    "SlopeCategory",
+    "IlluminationStatus",
+    "HazardType",
+    "HazardSeverity",
+    "SiteDataStatus",
+    "ProvenanceRecord",
+    "GraphNode",
+    "GraphEdge",
+    "TerrainMetrics",
+    "IlluminationMetrics",
+    "ResourceIndicator",
+    "HazardIndicator",
+    "CandidateSiteExplanation",
+    "CandidateSite",
+    "POC7Handover",
+    "SpatialKnowledgeGraph",
+    "TerrainIntelligenceEngine",
+    "KNOWN_LUNAR_CRATERS",
+    "IlluminationIntelligenceEngine",
+    "ResourceIntelligenceEngine",
+    "HazardIntelligenceEngine",
+    "CandidateSiteScoringEngine",
+    "POC7Visualizer",
+    "POC7ExperimentRunner",
 ]
-
-
-

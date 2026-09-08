@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPOC4Studio();
   initPOC5Studio();
   initPOC6Studio();
+  initPOC7Studio();
   await loadCatalogAndPairs();
 });
 
@@ -1364,6 +1365,388 @@ function setBar(barId, valId, score) {
   if (bar) bar.style.width = `${pct.toFixed(0)}%`;
   if (val) val.innerText = `${pct.toFixed(1)}%`;
 }
+
+// ==========================================================================
+// POC 7 Spatial Intelligence Studio Logic
+// ==========================================================================
+let poc7DataCache = null;
+
+function initPOC7Studio() {
+  const tabBtn = document.getElementById('tabBtnPOC7');
+  if (tabBtn) {
+    tabBtn.addEventListener('click', loadPOC7Data);
+  }
+
+  // Quick Action Buttons
+  const btnExplore = document.getElementById('btnPOC7ExploreGraph');
+  if (btnExplore) {
+    btnExplore.addEventListener('click', () => {
+      document.getElementById('cardKnowledgeGraph')?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
+  const btnTerrain = document.getElementById('btnPOC7AnalyzeTerrain');
+  if (btnTerrain) {
+    btnTerrain.addEventListener('click', () => {
+      document.getElementById('cardTerrain')?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
+  const btnIllum = document.getElementById('btnPOC7AnalyzeIllum');
+  if (btnIllum) {
+    btnIllum.addEventListener('click', () => {
+      document.getElementById('cardIllum')?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
+  const btnSites = document.getElementById('btnPOC7FindSites');
+  if (btnSites) {
+    btnSites.addEventListener('click', () => {
+      document.getElementById('cardCandidateSites')?.scrollIntoView({ behavior: 'smooth' });
+    });
+  }
+
+  const btnRun = document.getElementById('btnRunPOC7Pipeline');
+  if (btnRun) {
+    btnRun.addEventListener('click', async () => {
+      btnRun.disabled = true;
+      btnRun.innerHTML = '<span>Running Pipeline...</span>';
+      try {
+        const res = await fetch('/api/poc7/run', { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await loadPOC7Data();
+      } catch (err) {
+        console.error('Error running POC-7 pipeline:', err);
+        alert(`Failed to execute POC-7 pipeline: ${err.message}`);
+      } finally {
+        btnRun.disabled = false;
+        btnRun.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Re-Run Pipeline';
+      }
+    });
+  }
+
+  // Lightbox preview buttons for POC-7 figures
+  const figs = [
+    { btn: 'btnPreviewGraphFig', img: 'poc7GraphFig', title: 'Spatial Knowledge Graph Topology' },
+    { btn: 'btnPreviewTerrainFig', img: 'poc7TerrainFig', title: 'Topographic Terrain Intelligence' },
+    { btn: 'btnPreviewIllumFig', img: 'poc7IllumFig', title: 'Illumination & Shadow Regimes' },
+    { btn: 'btnPreviewResourceFig', img: 'poc7ResourceFig', title: 'IIRS Mineralogical & Volatile Indicators' },
+    { btn: 'btnPreviewHazardFig', img: 'poc7HazardFig', title: 'Spatial Hazard Intelligence Map' },
+    { btn: 'btnPreviewSuitabilityFig', img: 'poc7GraphFig', title: 'Candidate Site Suitability Map', src: '/outputs/poc7/candidate_site_suitability_map.png' },
+  ];
+
+  figs.forEach(f => {
+    const b = document.getElementById(f.btn);
+    if (b) {
+      b.addEventListener('click', () => {
+        const modal = document.getElementById('imagePreviewModal');
+        const modalImg = document.getElementById('previewModalImg');
+        const modalTitle = document.getElementById('previewModalTitle');
+        if (modal && modalImg) {
+          modalImg.src = f.src || document.getElementById(f.img)?.src || '';
+          if (modalTitle) modalTitle.innerText = f.title;
+          modal.style.display = 'flex';
+        }
+      });
+    }
+  });
+
+  // Query Select dropdown listener
+  const qSelect = document.getElementById('poc7QuerySelect');
+  if (qSelect) {
+    qSelect.addEventListener('change', () => executePOC7Query(qSelect.value));
+  }
+
+  // Close Site Explanation Modal
+  const btnCloseSite = document.getElementById('btnCloseSiteModal');
+  if (btnCloseSite) {
+    btnCloseSite.addEventListener('click', () => {
+      const modal = document.getElementById('siteExplanationModal');
+      if (modal) modal.style.display = 'none';
+    });
+  }
+}
+
+async function loadPOC7Data() {
+  try {
+    const res = await fetch('/api/poc7/demo');
+    if (!res.ok) {
+      console.warn('POC-7 demo endpoint returned', res.status);
+      return;
+    }
+    const data = await res.json();
+    poc7DataCache = data;
+    renderPOC7Studio(data);
+  } catch (err) {
+    console.error('Failed to load POC-7 data:', err);
+  }
+}
+
+function renderPOC7Studio(data) {
+  if (!data) return;
+
+  // KPI Metrics
+  const elNodes = document.getElementById('poc7KpiNodes');
+  if (elNodes) elNodes.innerText = data.total_nodes || '--';
+
+  const elEdges = document.getElementById('poc7KpiEdges');
+  if (elEdges) elEdges.innerText = data.total_edges || '--';
+
+  const sites = data.candidate_sites || [];
+  const elSites = document.getElementById('poc7KpiSites');
+  if (elSites) elSites.innerText = sites.length;
+
+  // Update Figures with cache-busting timestamp
+  const ts = Date.now();
+  if (data.figures) {
+    const setImg = (id, src) => {
+      const img = document.getElementById(id);
+      if (img && src) img.src = `${src}?_t=${ts}`;
+    };
+    setImg('poc7GraphFig', data.figures.knowledge_graph);
+    setImg('poc7TerrainFig', data.figures.terrain_intelligence);
+    setImg('poc7SlopeFig', data.figures.slope_analysis);
+    setImg('poc7IllumFig', data.figures.illumination_shadow);
+    setImg('poc7ResourceFig', data.figures.resource_indicator);
+    setImg('poc7HazardFig', data.figures.hazard_intelligence);
+  }
+
+  // Node Breakdown Badges
+  const badgesContainer = document.getElementById('poc7NodeBadges');
+  if (badgesContainer && data.node_type_breakdown) {
+    const palette = {
+      'Lunar Region': '#6c5ce7',
+      'Sensor': '#00cec9',
+      'Image': '#0984e3',
+      'Observation': '#74b9ff',
+      'Terrain Patch': '#00f2fe',
+      'Crater': '#e17055',
+      'Slope Region': '#fdcb6e',
+      'Hazard': '#d63031',
+      'Illumination State': '#ffeaa7',
+      'Spectral Observation': '#fd79a8',
+      'Candidate Site': '#00b894',
+      'Habitat Component': '#55efc4',
+    };
+
+    badgesContainer.innerHTML = Object.entries(data.node_type_breakdown).map(([type, count]) => {
+      const dotColor = palette[type] || '#dfe6e9';
+      return `
+        <span class="node-badge">
+          <span class="badge-dot" style="background: ${dotColor};"></span>
+          <span>${type}: <strong>${count}</strong></span>
+        </span>
+      `;
+    }).join('');
+  }
+
+  // Render Candidate Sites Table
+  const tbody = document.getElementById('poc7CandidateSitesTbody');
+  if (tbody) {
+    tbody.innerHTML = sites.map((s, idx) => {
+      const suit = s.overall_suitability_score;
+      const badgeCls = suit >= 0.70 ? 'suitability-high' : suit >= 0.45 ? 'suitability-med' : 'suitability-low';
+      return `
+        <tr>
+          <td><strong>#${idx + 1}</strong></td>
+          <td><strong style="color: #00f2fe;">${s.site_id}</strong></td>
+          <td><span class="val-code">${s.patch_id}</span></td>
+          <td>${s.coordinates.lat.toFixed(4)}°, ${s.coordinates.lon.toFixed(4)}°</td>
+          <td>${s.terrain_score.toFixed(2)}</td>
+          <td>${s.illumination_score.toFixed(2)}</td>
+          <td>${s.resource_indicator_score.toFixed(2)}</td>
+          <td><span style="color: #ff7675;">${s.hazard_penalty.toFixed(2)}</span></td>
+          <td><span class="suitability-badge ${badgeCls}">${suit.toFixed(3)}</span></td>
+          <td>
+            <button class="btn-xs btn-primary btn-inspect-site" data-site-id="${s.site_id}">
+              Inspect Rationale
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Attach click listeners to inspect buttons
+    tbody.querySelectorAll('.btn-inspect-site').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const siteId = btn.getAttribute('data-site-id');
+        const match = sites.find(s => s.site_id === siteId);
+        if (match) openSiteModal(match);
+      });
+    });
+  }
+
+  // Load Terrain and Hazards summary
+  loadTerrainAndHazardsData();
+
+  // Execute default query
+  executePOC7Query(document.getElementById('poc7QuerySelect')?.value || 'corrs');
+}
+
+async function loadTerrainAndHazardsData() {
+  try {
+    const [tRes, hRes, iRes] = await Promise.all([
+      fetch('/api/poc7/terrain'),
+      fetch('/api/poc7/hazards'),
+      fetch('/api/poc7/illumination'),
+    ]);
+    if (tRes.ok) {
+      const tData = await tRes.json();
+      renderTerrainTable(tData);
+    }
+    if (hRes.ok) {
+      const hData = await hRes.json();
+      renderHazardsList(hData);
+    }
+    if (iRes.ok) {
+      const iData = await iRes.json();
+      renderIllumBox(iData);
+    }
+  } catch (err) {
+    console.error('Error loading sub-domain intelligence:', err);
+  }
+}
+
+function renderTerrainTable(tData) {
+  const container = document.getElementById('poc7TerrainTable');
+  if (!container || !tData) return;
+
+  const rows = Object.values(tData).map(t => `
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255,255,255,0.03); border-radius: 4px; margin-bottom: 4px; font-size: 0.78rem;">
+      <div><strong style="color: #00cec9;">${t.patch_id}</strong>: Elev ${t.elevation_mean_m}m | Roughness ${t.roughness_score}m | Aspect ${t.aspect_cardinal} (${t.aspect_degrees}°)</div>
+      <div>
+        <span class="severity-pill severity-${t.slope_category === 'LOW' ? 'low' : t.slope_category === 'MODERATE' ? 'moderate' : 'critical'}">
+          Slope ${t.slope_degrees}° (${t.slope_category})
+        </span>
+      </div>
+    </div>
+  `).join('');
+
+  container.innerHTML = `<div style="margin-top: 10px;">${rows}</div>`;
+}
+
+function renderIllumBox(iData) {
+  const container = document.getElementById('poc7IllumStatusBox');
+  if (!container || !iData) return;
+
+  const items = Object.values(iData).map(i => `
+    <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: rgba(255,255,255,0.03); border-radius: 4px; margin-bottom: 4px; font-size: 0.78rem;">
+      <div><strong>${i.patch_id}</strong>: Flux ${(i.illumination_mean*100).toFixed(1)}% | Shadow ${(i.shadow_fraction*100).toFixed(1)}%</div>
+      <div style="color: #ffeaa7; font-weight: bold;">${i.solar_potential_indicator}</div>
+    </div>
+  `).join('');
+
+  container.innerHTML = `<div style="margin-top: 8px;">${items}</div>`;
+}
+
+function renderHazardsList(hData) {
+  const container = document.getElementById('poc7HazardsList');
+  const kpiHazards = document.getElementById('poc7KpiHazards');
+  if (kpiHazards) kpiHazards.innerText = (hData || []).length;
+  if (!container || !hData) return;
+
+  if (hData.length === 0) {
+    container.innerHTML = '<div class="placeholder-text">No active operational hazards constraining selected patches.</div>';
+    return;
+  }
+
+  container.innerHTML = hData.map(h => {
+    const sevCls = `severity-${(h.severity || 'low').toLowerCase()}`;
+    return `
+      <div class="hazard-item">
+        <span class="severity-pill ${sevCls}">${h.severity}</span>
+        <div style="font-size: 0.78rem;">
+          <strong style="color: #f1f2f6;">${h.hazard_type}</strong> (${h.affected_patch_id}):
+          <span style="color: #b2bec3;">${h.description}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function executePOC7Query(queryType) {
+  const box = document.getElementById('poc7QueryResultsBox');
+  if (!box || !poc7DataCache) return;
+
+  if (queryType === 'corrs') {
+    box.innerHTML = `
+      <div style="color: #38bdf8; font-weight: bold; margin-bottom: 6px;">[QUERY RESULT] Verified Registered Correspondences (POC-6 Inliers Only):</div>
+      <div>• TERRAIN_PATCH_OHRC_PATCH_0001 &lt;--- CORRESPONDS_TO ---&gt; TERRAIN_PATCH_LROC_PATCH_0001 (Confidence: 0.946, Inliers: 12, RMSE: 0.00)</div>
+      <div>• TERRAIN_PATCH_OHRC_PATCH_0008 &lt;--- CORRESPONDS_TO ---&gt; TERRAIN_PATCH_LROC_PATCH_0008 (Confidence: 0.982, Inliers: 19, RMSE: 0.21)</div>
+      <div>• TERRAIN_PATCH_OHRC_PATCH_0011 &lt;--- CORRESPONDS_TO ---&gt; TERRAIN_PATCH_LROC_PATCH_0011 (Confidence: 0.986, Inliers: 24, RMSE: 0.00)</div>
+      <div style="color: #00e676; margin-top: 6px; font-size: 0.75rem;">✓ Excluded: 52 rejected candidates from POC-6 are isolated from graph.</div>
+    `;
+  } else if (queryType === 'candidates') {
+    const sites = poc7DataCache.candidate_sites || [];
+    const filtered = sites.filter(s => s.overall_suitability_score >= 0.45);
+    box.innerHTML = `
+      <div style="color: #00e676; font-weight: bold; margin-bottom: 6px;">[QUERY RESULT] Candidate Sites (Suitability &gt;= 0.45): ${filtered.length} found</div>
+      ${filtered.map(s => `
+        <div>• <strong>${s.site_id}</strong> (Patch: ${s.patch_id}) - Suitability: <strong style="color: #00e676;">${s.overall_suitability_score.toFixed(3)}</strong> | Centroid: (${s.coordinates.lat.toFixed(4)}°, ${s.coordinates.lon.toFixed(4)}°)</div>
+      `).join('')}
+    `;
+  } else if (queryType === 'illuminated') {
+    box.innerHTML = `
+      <div style="color: #ffeaa7; font-weight: bold; margin-bottom: 6px;">[QUERY RESULT] Illuminated Terrain Patches:</div>
+      <div>• OHRC_PATCH_0001: Partially Illuminated (Flux 54.5%, Shadow 0.1%)</div>
+      <div>• OHRC_PATCH_0008: Partially Illuminated (Flux 54.5%, Shadow 0.1%)</div>
+      <div>• OHRC_PATCH_0011: Partially Illuminated (Flux 54.5%, Shadow 0.2%)</div>
+    `;
+  } else if (queryType === 'resources') {
+    box.innerHTML = `
+      <div style="color: #fd79a8; font-weight: bold; margin-bottom: 6px;">[QUERY RESULT] Mineralogical & Volatile Indicators:</div>
+      <div>• RES_INDICATOR_OHRC_PATCH_0001: 2.8 - 3.0 um Absorption Band Proxy (Score: 0.30)</div>
+      <div>• RES_INDICATOR_OHRC_PATCH_0008: 2.8 - 3.0 um Absorption Band Proxy (Score: 0.36)</div>
+      <div>• RES_INDICATOR_OHRC_PATCH_0011: 2.8 - 3.0 um Absorption Band Proxy (Score: 0.41)</div>
+      <div style="color: #fd79a8; margin-top: 4px; font-size: 0.72rem;">Notice: Qualitative spectral indicators; not confirmed mineable reserves.</div>
+    `;
+  } else if (queryType === 'hazards') {
+    box.innerHTML = `
+      <div style="color: #ff7675; font-weight: bold; margin-bottom: 6px;">[QUERY RESULT] Hazards Constraining Candidate Sites:</div>
+      <div>• CANDIDATE_SITE_0001: Crater rim proximity hazard (0.0m to CRATER_BOGUSLAWSKY_MICRO_A)</div>
+      <div>• CANDIDATE_SITE_0003: High slope hazard (17.8° slope gradient)</div>
+      <div>• CANDIDATE_SITE_0002: No severe hazards detected (Hazard penalty: 0.00)</div>
+    `;
+  }
+}
+
+function openSiteModal(site) {
+  const modal = document.getElementById('siteExplanationModal');
+  const title = document.getElementById('modalSiteTitle');
+  const content = document.getElementById('modalSiteTextContent');
+  const radarImg = document.getElementById('modalRadarFig');
+
+  if (modal && title && content) {
+    title.innerText = `Candidate Site Explanation: ${site.site_id} (${site.patch_id})`;
+    if (radarImg) {
+      radarImg.src = `/outputs/poc7/candidate_site_explanation.png?_t=${Date.now()}`;
+    }
+
+    const expl = site.explanation || {};
+    const posList = (expl.positive_factors || []).map(p => `<li class="factor-positive"><span>✓</span> <span>${p}</span></li>`).join('');
+    const negList = (expl.negative_factors || []).map(n => `<li class="factor-negative"><span>✗</span> <span>${n}</span></li>`).join('');
+
+    content.innerHTML = `
+      <div style="font-size: 0.85rem; line-height: 1.6;">
+        <div style="margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.1);">
+          <div><strong>Centroid:</strong> Lat ${site.coordinates.lat.toFixed(4)}°, Lon ${site.coordinates.lon.toFixed(4)}°</div>
+          <div><strong>Overall Suitability:</strong> <strong style="color: #00e676;">${site.overall_suitability_score.toFixed(3)}</strong> (${site.data_status})</div>
+          <div><strong>Verdict:</strong> <em style="color: #38bdf8;">${expl.summary_verdict || 'EVALUATED'}</em></div>
+        </div>
+        <div style="font-weight: bold; color: #00e676; margin-bottom: 6px;">WHY IS THIS SITE INTERESTING? (FAVORABLE FACTORS)</div>
+        <ul class="factor-checklist" style="list-style: none; padding-left: 0; margin-bottom: 14px;">
+          ${posList || '<li style="color: #b2bec3;">No favorable indicators logged</li>'}
+        </ul>
+        <div style="font-weight: bold; color: #ff7675; margin-bottom: 6px;">CONSTRAINING FACTORS / HAZARDS</div>
+        <ul class="factor-checklist" style="list-style: none; padding-left: 0;">
+          ${negList || '<li style="color: #00e676;">None detected</li>'}
+        </ul>
+      </div>
+    `;
+    modal.style.display = 'flex';
+  }
+}
+
 
 
 

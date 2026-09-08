@@ -1705,4 +1705,224 @@ body.nexus-theme {
   box-shadow: 0 0 10px rgba(0, 242, 254, 0.3);
 }
 
+/* =========================================================================
+   POC-7 SPATIAL INTELLIGENCE STUDIO STYLING
+   ========================================================================= */
+
+.poc7-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 10px 0 30px 0;
+}
+
+.poc7-grid {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1200px) {
+  .poc7-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.poc7-col-left, .poc7-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.node-badges-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.node-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #dfe6e9;
+}
+
+.node-badge .badge-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.query-results-box {
+  background: rgba(11, 14, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 14px;
+  min-height: 160px;
+  max-height: 280px;
+  overflow-y: auto;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: #f1f2f6;
+}
+
+.two-col-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 800px) {
+  .two-col-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.two-card-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .two-card-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.scientific-disclaimer-box {
+  background: rgba(253, 121, 168, 0.08);
+  border: 1px solid rgba(253, 121, 168, 0.35);
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+}
+
+.scientific-disclaimer-box .disclaimer-header {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: #fd79a8;
+  margin-bottom: 4px;
+}
+
+.scientific-disclaimer-box p {
+  font-size: 0.76rem;
+  color: #dfe6e9;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.hazards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.hazard-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.severity-pill {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.severity-critical {
+  background: rgba(214, 48, 49, 0.25);
+  color: #ff7675;
+  border: 1px solid #d63031;
+}
+
+.severity-high {
+  background: rgba(225, 112, 85, 0.25);
+  color: #fab1a0;
+  border: 1px solid #e17055;
+}
+
+.severity-moderate {
+  background: rgba(253, 203, 110, 0.25);
+  color: #ffeaa7;
+  border: 1px solid #fdcb6e;
+}
+
+.severity-low {
+  background: rgba(0, 184, 148, 0.25);
+  color: #55efc4;
+  border: 1px solid #00b894;
+}
+
+.candidate-sites-table-container {
+  overflow-x: auto;
+}
+
+.suitability-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.suitability-high {
+  background: rgba(0, 184, 148, 0.2);
+  border: 1px solid #00b894;
+  color: #00e676;
+}
+
+.suitability-med {
+  background: rgba(253, 203, 110, 0.2);
+  border: 1px solid #fdcb6e;
+  color: #ffeaa7;
+}
+
+.suitability-low {
+  background: rgba(214, 48, 49, 0.2);
+  border: 1px solid #d63031;
+  color: #ff7675;
+}
+
+.factor-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.factor-positive {
+  color: #00e676;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.factor-negative {
+  color: #ff7675;
+  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+
 

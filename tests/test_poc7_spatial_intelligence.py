@@ -446,3 +446,151 @@ def test_poc7_pipeline_runner(tmp_path):
         assert "terrain_score" in s
         assert "coordinates" in s
         assert "explanation" in s
+
+
+# =============================================================================
+# 10. Audit Correction Tests (Issues 2-8)
+# =============================================================================
+
+def test_pipeline_creates_image_and_observation_nodes(tmp_path):
+    """ISSUE-2: Verify Image and Observation nodes are created per accepted pair in the pipeline."""
+    runner = POC7ExperimentRunner(output_dir=tmp_path)
+    result = runner.run()
+    graph = result["graph"]
+
+    image_nodes = graph.get_nodes_by_type(NodeType.IMAGE)
+    observation_nodes = graph.get_nodes_by_type(NodeType.OBSERVATION)
+
+    # 3 accepted pairs => 6 images (2 per pair) and 6 observations (2 per pair)
+    assert len(image_nodes) == 6, f"Expected 6 Image nodes, got {len(image_nodes)}"
+    assert len(observation_nodes) == 6, f"Expected 6 Observation nodes, got {len(observation_nodes)}"
+
+    # Verify Image nodes carry product_id and sensor
+    for img_node in image_nodes:
+        assert "product_id" in img_node.properties
+        assert "sensor" in img_node.properties
+        assert "data_source" in img_node.properties
+
+    # Verify Observation nodes carry verification info
+    for obs_node in observation_nodes:
+        assert "observation_id" in obs_node.properties
+        assert "verification_confidence" in obs_node.properties
+        assert "data_status" in obs_node.properties
+
+
+def test_pipeline_creates_has_elevation_edges(tmp_path):
+    """ISSUE-3: Verify HAS_ELEVATION edges are created linking terrain patches to elevation data."""
+    runner = POC7ExperimentRunner(output_dir=tmp_path)
+    result = runner.run()
+    graph = result["graph"]
+
+    has_elev_edges = [e for e in graph.edges
+                      if (e.relationship.value if hasattr(e.relationship, "value") else str(e.relationship))
+                      == RelationType.HAS_ELEVATION.value]
+
+    # 3 accepted pairs => 3 query patches => 3 HAS_ELEVATION edges
+    assert len(has_elev_edges) == 3, f"Expected 3 HAS_ELEVATION edges, got {len(has_elev_edges)}"
+
+    # Verify elevation properties on the edge
+    for edge in has_elev_edges:
+        assert "elevation_mean_m" in edge.properties
+        assert "elevation_units" in edge.properties
+        assert edge.properties["elevation_units"] == "meters"
+
+
+def test_pipeline_creates_overlaps_edges(tmp_path):
+    """ISSUE-4: Verify OVERLAPS edges are created between accepted correspondent patches."""
+    runner = POC7ExperimentRunner(output_dir=tmp_path)
+    result = runner.run()
+    graph = result["graph"]
+
+    overlaps_edges = [e for e in graph.edges
+                      if (e.relationship.value if hasattr(e.relationship, "value") else str(e.relationship))
+                      == RelationType.OVERLAPS.value]
+
+    # 3 accepted pairs => 3 OVERLAPS edges
+    assert len(overlaps_edges) == 3, f"Expected 3 OVERLAPS edges, got {len(overlaps_edges)}"
+
+    # Each OVERLAPS edge must reference POC-6 confirmation
+    for edge in overlaps_edges:
+        assert "overlap_confirmed_by" in edge.properties
+        assert "POC-6" in edge.properties["overlap_confirmed_by"]
+
+
+def test_low_light_uses_constraint_not_permanent_shadow():
+    """ISSUE-6: LOW_LIGHT single-epoch must use LOW_LIGHT_CONSTRAINT, not PERMANENT_SHADOW."""
+    h_engine = HazardIntelligenceEngine()
+    t_engine = TerrainIntelligenceEngine()
+    i_engine = IlluminationIntelligenceEngine()
+
+    t_metrics = t_engine.analyze_terrain_patch("LOWLIGHT_PATCH", np.zeros((32, 32)),
+                                              {"min_lat": -72.5, "max_lat": -72.0, "min_lon": 24.0, "max_lon": 25.0},
+                                              {"lat": -72.25, "lon": 24.5})
+
+    # Create a low-light image (mean ~0.25, below 0.35 threshold, above 0.15 shadow threshold)
+    i_metrics = i_engine.analyze_patch_illumination("LOWLIGHT_PATCH", image_array=np.ones((16, 16)) * 0.25)
+    assert i_metrics.illumination_state == IlluminationStatus.LOW_LIGHT
+
+    hazards = h_engine.assess_hazards("LOWLIGHT_PATCH", t_metrics, i_metrics, {"lat": -72.25, "lon": 24.5})
+
+    # Should have a LOW_LIGHT_CONSTRAINT hazard, NOT PERMANENT_SHADOW
+    light_hazards = [h for h in hazards if h.hazard_type in (HazardType.LOW_LIGHT_CONSTRAINT, HazardType.PERMANENT_SHADOW)]
+    assert len(light_hazards) >= 1
+    for h in light_hazards:
+        assert h.hazard_type == HazardType.LOW_LIGHT_CONSTRAINT, \
+            f"Expected LOW_LIGHT_CONSTRAINT, got {h.hazard_type} — single-epoch LOW_LIGHT must not claim PERMANENT_SHADOW"
+        assert "single epoch" in h.description.lower()
+        assert "permanent" not in h.description.lower()
+
+
+def test_resource_indicator_data_status():
+    """ISSUE-7: ResourceIndicator must have explicit data_status field distinguishing real vs synthetic."""
+    engine = ResourceIntelligenceEngine()
+
+    # Synthetic path (no IIRS catalog item)
+    synthetic = engine.evaluate_iirs_spectral_indicator("PATCH_001", {"lat": -72.5, "lon": 24.5})
+    assert hasattr(synthetic, "data_status"), "ResourceIndicator must have data_status field"
+    assert synthetic.data_status == "SYNTHETIC OFFLINE DEMO"
+
+    # Real-data path (with IIRS catalog item)
+    real = engine.evaluate_iirs_spectral_indicator(
+        "PATCH_002", {"lat": -72.5, "lon": 24.5},
+        iirs_catalog_item={"band_wavelength": "2.8 um", "spectral_indicator_score": 0.55}
+    )
+    assert real.data_status == "DATA-DRIVEN"
+
+
+def test_candidate_site_data_status_propagation():
+    """ISSUE-8: Candidate site data_status must conservatively propagate from components.
+    If any component is synthetic, the site must be SYNTHETIC_DEMO, not DATA_DRIVEN."""
+    scoring_engine = CandidateSiteScoringEngine()
+    t_engine = TerrainIntelligenceEngine()
+    i_engine = IlluminationIntelligenceEngine()
+
+    # All synthetic components
+    t_metrics = t_engine.analyze_terrain_patch("SYNTH_PATCH", None,
+                                              {"min_lat": -72.5, "max_lat": -72.0, "min_lon": 24.0, "max_lon": 25.0},
+                                              {"lat": -72.25, "lon": 24.5})
+    assert t_metrics.data_status == "SYNTHETIC OFFLINE DEMO"
+
+    i_metrics = i_engine.analyze_patch_illumination("SYNTH_PATCH")
+    assert i_metrics.data_status == "SYNTHETIC OFFLINE DEMO"
+
+    res_ind = ResourceIndicator(indicator_id="RES_SYNTH", indicator_score=0.4,
+                                data_status="SYNTHETIC OFFLINE DEMO")
+
+    site = scoring_engine.evaluate_site(
+        site_id="SITE_SYNTH",
+        patch_id="SYNTH_PATCH",
+        coordinates={"lat": -72.25, "lon": 24.5},
+        bbox={"min_lat": -72.5, "max_lat": -72.0, "min_lon": 24.0, "max_lon": 25.0},
+        terrain=t_metrics,
+        illumination=i_metrics,
+        resource=res_ind,
+        hazards=[],
+    )
+
+    # Must NOT be DATA-DRIVEN when all components are synthetic
+    assert site.data_status == SiteDataStatus.SYNTHETIC_DEMO, \
+        f"Expected SYNTHETIC_DEMO, got {site.data_status} — synthetic components must not produce DATA_DRIVEN site"
+

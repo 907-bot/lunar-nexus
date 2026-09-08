@@ -201,11 +201,23 @@ class CandidateSiteScoringEngine:
             summary_verdict=verdict,
         )
 
-        # Determine data status
-        if terrain and terrain.data_status == "SYNTHETIC OFFLINE DEMO":
-            data_status = SiteDataStatus.SYNTHETIC_DEMO
-        elif terrain and illumination and resource:
+        # Determine data status — conservatively propagate from component data_status fields.
+        # If ANY component is synthetic, the site is at minimum SYNTHETIC_DEMO.
+        # Only all-DATA-DRIVEN components justify DATA_DRIVEN site status.
+        component_statuses = []
+        if terrain:
+            component_statuses.append(getattr(terrain, "data_status", "SYNTHETIC OFFLINE DEMO"))
+        if illumination:
+            component_statuses.append(getattr(illumination, "data_status", "SYNTHETIC OFFLINE DEMO"))
+        if resource:
+            component_statuses.append(getattr(resource, "data_status", "SYNTHETIC OFFLINE DEMO"))
+
+        if not component_statuses:
+            data_status = SiteDataStatus.PARTIALLY_OBSERVABLE
+        elif all(s == "DATA-DRIVEN" for s in component_statuses) and terrain and illumination and resource:
             data_status = SiteDataStatus.DATA_DRIVEN
+        elif any("SYNTHETIC" in s for s in component_statuses):
+            data_status = SiteDataStatus.SYNTHETIC_DEMO
         else:
             data_status = SiteDataStatus.PARTIALLY_OBSERVABLE
 
