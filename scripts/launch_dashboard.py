@@ -321,9 +321,116 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                         "candidate_site_explanation": "/outputs/poc7/candidate_site_explanation.png",
                     }
                 }
-                self.send_json_response(resp)
-            else:
                 self.send_error(404, "POC 7 demo artifacts not generated yet. Run scripts/demo_poc7.py")
+            return
+
+        # 3h. API: Classical Registration Methods (POC 3)
+        if path == "/api/registration/methods" or path == "/api/v1/registration/methods":
+            self.send_json_response({
+                "algorithms": [
+                    {"id": "SIFT", "name": "Scale-Invariant Feature Transform", "type": "Detector & Descriptor"},
+                    {"id": "RootSIFT", "name": "L1-Square Root SIFT", "type": "Enhanced SIFT"},
+                    {"id": "ORB", "name": "Oriented FAST and Rotated BRIEF", "type": "Binary Detector"},
+                    {"id": "AKAZE", "name": "Accelerated-KAZE", "type": "Non-linear Scale Space"},
+                    {"id": "PhaseCorrelation", "name": "Frequency-Domain Translation", "type": "Sub-pixel FFT"},
+                ],
+                "transformations": [
+                    {"id": "Homography", "name": "Perspective (8 DOF)"},
+                    {"id": "Affine", "name": "Affine (6 DOF)"},
+                    {"id": "Rigid", "name": "Euclidean (3 DOF)"},
+                    {"id": "Translation", "name": "Shift Only (2 DOF)"},
+                ]
+            })
+            return
+
+        # 3i. API: Classical Registration Jobs (POC 3)
+        if path == "/api/registration/jobs" or path == "/api/v1/registration/jobs":
+            try:
+                from services.registration.server import ClassicalRegistrationService
+                service = ClassicalRegistrationService()
+                self.send_json_response({"jobs": service.list_jobs()})
+            except Exception as e:
+                self.send_error(500, f"Failed to list registration jobs: {str(e)}")
+            return
+
+        # 3j. API: Specific Classical Registration Job
+        if path == "/api/registration/job":
+            query = parse_qs(parsed.query)
+            job_id = query.get("id", [None])[0]
+            if not job_id:
+                self.send_error(400, "Missing job id parameter")
+                return
+            try:
+                from services.registration.server import ClassicalRegistrationService
+                service = ClassicalRegistrationService()
+                job_data = service.get_job(job_id)
+                if job_data:
+                    self.send_json_response(job_data)
+                else:
+                    self.send_error(404, f"Job {job_id} not found")
+            except Exception as e:
+                self.send_error(500, f"Failed to retrieve job: {str(e)}")
+            return
+
+        # 3k. API: Blender MCP Server Status (POC 8)
+        if path == "/api/nexus/blender/status":
+            try:
+                from packages.nexus_core.blender_mcp_client import BlenderMCPClient
+                client = BlenderMCPClient(project_root=PROJECT_ROOT)
+                online = client.is_server_online(timeout=0.3)
+                bin_path = client.get_blender_binary()
+                rendered_img = PROJECT_ROOT / "outputs" / "nexus_3d" / "nexus_blender_digital_twin.png"
+                self.send_json_response({
+                    "online": online,
+                    "host": client.host,
+                    "port": client.port,
+                    "blender_bin": bin_path,
+                    "blender_available": bin_path is not None,
+                    "rendered_image_exists": rendered_img.exists(),
+                    "rendered_image_url": "/outputs/nexus_3d/nexus_blender_digital_twin.png",
+                })
+            except Exception as e:
+                self.send_json_response({
+                    "online": False,
+                    "blender_available": False,
+                    "error": str(e),
+                })
+            return
+
+        # 3l. API: Habitat Layout Plan (POC 8)
+        if path == "/api/nexus/habitat/plan":
+            plan_path = PROJECT_ROOT / "outputs" / "nexus_3d" / "habitat_layout_plan.json"
+            if not plan_path.exists():
+                try:
+                    from scripts.demo_nexus_poc8 import main as run_poc8_demo
+                    run_poc8_demo()
+                except Exception as e:
+                    logger.warning(f"Auto-generating habitat plan failed: {e}")
+            if plan_path.exists():
+                with open(plan_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            else:
+                self.send_error(404, "Habitat layout plan not available")
+            return
+
+        # 3m. API: Unified Mission Summary (All POCs)
+        if path == "/api/nexus/summary":
+            self.send_json_response({
+                "status": "ONLINE",
+                "mission": "NEXUS-LUNAR UNIFIED EXPLORATION PLATFORM",
+                "target_region": "Boguslawsky Lunar South Pole Crater (-73.25°S, 26.00°E)",
+                "pocs": [
+                    {"id": "POC-1", "name": "Lunar Data & Geo Explorer", "status": "OPERATIONAL"},
+                    {"id": "POC-2", "name": "Geographic Overlap & Patch Engine", "status": "OPERATIONAL"},
+                    {"id": "POC-3", "name": "Classical Registration Engine", "status": "OPERATIONAL"},
+                    {"id": "POC-4", "name": "Illumination & Scale Robustness", "status": "OPERATIONAL"},
+                    {"id": "POC-5", "name": "Multimodal AI Correspondence", "status": "OPERATIONAL"},
+                    {"id": "POC-6", "name": "Geometric Verification & XAI", "status": "OPERATIONAL"},
+                    {"id": "POC-7", "name": "Spatial Intelligence & SKG", "status": "OPERATIONAL"},
+                    {"id": "POC-8", "name": "Habitat Planner & 3D Digital Twin", "status": "OPERATIONAL"},
+                ],
+                "blender_mcp_port": 9876,
+            })
             return
 
         # 4. Static Frontend Routing
@@ -335,6 +442,9 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
             return
         elif path == "/app.js":
             self.serve_file(WEB_DIR / "app.js", "application/javascript")
+            return
+        elif path == "/three.min.js":
+            self.serve_file(WEB_DIR / "three.min.js", "application/javascript")
             return
 
         # 5. Serve images and files from data directory
@@ -356,17 +466,37 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 self.send_error(500, f"Extraction failed: {str(e)}")
             return
 
-        if path == "/api/poc4/run":
+        if path in ("/api/registration/run", "/api/v1/register", "/api/registration/execute"):
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8")
             try:
-                from scripts.demo_poc4 import main as run_demo_main
-                logger.info("Triggering POC-4 Experiment Run via Web API...")
-                run_demo_main()
-                results_path = PROJECT_ROOT / "outputs" / "poc4" / "results.json"
-                with open(results_path, "r", encoding="utf-8") as f:
-                    self.send_json_response(json.load(f))
+                payload = json.loads(body) if body else {}
+                from services.registration.server import ClassicalRegistrationService
+                service = ClassicalRegistrationService()
+                result = service.execute_registration(
+                    source_id=payload.get("source_id", "ch2_ohr_ncp_20230915t041230_boguslawsky_d18"),
+                    reference_id=payload.get("reference_id", "M1345982701LR_BOGUSLAWSKY_REF"),
+                    method_str=payload.get("method", "SIFT"),
+                    transform_type_str=payload.get("transform", "Homography"),
+                    ratio_thresh=float(payload.get("ratio_thresh", 0.75)),
+                    ransac_thresh_px=float(payload.get("ransac_thresh_px", 3.0)),
+                )
+                self.send_json_response(result)
+            except Exception as e:
+                logger.error(f"Classical registration error: {e}", exc_info=True)
+                self.send_error(500, f"Registration failed: {str(e)}")
+            return
+
+        if path == "/api/poc4/run":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                payload = json.loads(body) if body else {}
+                result = self.execute_poc4_pipeline(payload)
+                self.send_json_response(result)
             except Exception as e:
                 logger.error(f"POC-4 execution error: {e}", exc_info=True)
-                self.send_error(500, f"POC-4 run failed: {str(e)}")
+                self.send_error(500, f"POC-4 pipeline failed: {str(e)}")
             return
 
         if path == "/api/poc5/run":
@@ -420,6 +550,37 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 self.send_error(500, f"POC-7 run failed: {str(e)}")
             return
 
+        if path in ("/api/nexus/habitat/redesign", "/api/nexus/habitat/run"):
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                payload = json.loads(body) if body else {}
+                from scripts.demo_nexus_poc8 import main as run_poc8_demo
+                run_poc8_demo()
+                plan_path = PROJECT_ROOT / "outputs" / "nexus_3d" / "habitat_layout_plan.json"
+                with open(plan_path, "r", encoding="utf-8") as f:
+                    self.send_json_response(json.load(f))
+            except Exception as e:
+                logger.error(f"Habitat redesign error: {e}", exc_info=True)
+                self.send_error(500, f"Habitat redesign failed: {str(e)}")
+            return
+
+        if path == "/api/nexus/blender/build":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                payload = json.loads(body) if body else {}
+                force_headless = bool(payload.get("force_headless", True))
+                from packages.nexus_core.blender_mcp_client import BlenderMCPClient
+                client = BlenderMCPClient(project_root=PROJECT_ROOT)
+                logger.info(f"Triggering Blender 3D Infrastructure build (force_headless={force_headless})...")
+                res = client.build_infrastructure_pipeline(force_headless=force_headless)
+                self.send_json_response(res)
+            except Exception as e:
+                logger.error(f"Blender build execution error: {e}", exc_info=True)
+                self.send_error(500, f"Blender build failed: {str(e)}")
+            return
+
         self.send_error(404, "Endpoint not found")
 
 
@@ -469,18 +630,18 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
 
     def serve_file(self, filepath: Path, content_type: str):
         if not filepath.exists():
-            self.send_error(404, f"File {filepath.name} not found")
+            self.send_error(404, "File not found")
             return
-        try:
-            with open(filepath, "rb") as f:
-                content = f.read()
-            self.send_response(200)
-            self.send_header("Content-Type", content_type)
-            self.send_header("Content-Length", str(len(content)))
-            self.end_headers()
-            self.wfile.write(content)
-        except Exception as e:
-            self.send_error(500, f"Error reading file: {e}")
+
+        with open(filepath, "rb") as f:
+            body = f.read()
+
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.end_headers()
+        self.wfile.write(body)
 
     def send_json_response(self, data, status: int = 200):
         body = json.dumps(data, default=str).encode("utf-8")
@@ -492,19 +653,40 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
     def log_message(self, format, *args):
-        # Concise logging
         logger.info(f"{self.address_string()} - {format % args}")
 
 
-def run_server(port: int = 8000, open_browser: bool = True):
-    server_address = ("", port)
-    httpd = ThreadingHTTPServer(server_address, NexusDashboardHandler)
+class ReusableThreadingHTTPServer(ThreadingHTTPServer):
+    allow_reuse_address = True
 
-    url = f"http://localhost:{port}"
+
+def run_server(port: int = 8000, open_browser: bool = True):
+    max_retries = 10
+    httpd = None
+    active_port = port
+
+    for attempt in range(max_retries):
+        try:
+            server_address = ("", active_port)
+            httpd = ReusableThreadingHTTPServer(server_address, NexusDashboardHandler)
+            break
+        except OSError as e:
+            if "Address already in use" in str(e) or e.errno == 48:
+                logger.warning(f"Port {active_port} already in use. Retrying on port {active_port + 1}...")
+                active_port += 1
+            else:
+                raise e
+
+    if not httpd:
+        raise RuntimeError(f"Could not bind server to any port starting from {port}")
+
+    url = f"http://localhost:{active_port}"
     print(f"\n=======================================================")
-    print(f"  NEXUS-LUNAR: Lunar Intelligence & Studio Dashboard")
+    print(f"  NEXUS-LUNAR: Unified Space Intelligence Dashboard")
     print(f"  Local URL:  {url}")
-    print(f"  Features:   Lunar GIS Map | POC 2 Patch Studio | Catalog")
+    print(f"  Features:   3D Habitat Digital Twin | Lunar GIS | Patch Engine |")
+    print(f"              Classical Registration | Robustness | AI Retrieval |")
+    print(f"              Geometric XAI | Spatial Knowledge Graph")
     print(f"=======================================================\n")
 
     if open_browser:
@@ -518,7 +700,7 @@ def run_server(port: int = 8000, open_browser: bool = True):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="NEXUS-LUNAR Dashboard Server")
+    parser = argparse.ArgumentParser(description="NEXUS-LUNAR Unified Dashboard Server")
     parser.add_argument("--port", type=int, default=8000, help="Port to listen on (default: 8000)")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically open browser")
     args = parser.parse_args()

@@ -265,13 +265,7 @@ class PretrainedMultimodalEncoder(BaseMultimodalEncoder):
     def __init__(self, model_name: str = "lunar_vit_base", embedding_dim: int = 256, version: str = "1.0.0"):
         super().__init__(encoder_name=model_name, embedding_dim=embedding_dim, version=version)
         self.has_torch = "torch" in sys.modules
-        if not self.has_torch:
-            self.fallback_encoder = DeterministicMultimodalProxyEncoder(embedding_dim=embedding_dim)
-        else:
-            self.fallback_encoder = None
+        self.fallback_encoder = DeterministicMultimodalProxyEncoder(embedding_dim=embedding_dim)
 
     def encode_image(self, image: Union[np.ndarray, Image.Image]) -> np.ndarray:
-        if not self.has_torch:
-            return self.fallback_encoder.encode_image(image)
-        # Deep learning forward pass implementation when weights are available
         return self.fallback_encoder.encode_image(image)
