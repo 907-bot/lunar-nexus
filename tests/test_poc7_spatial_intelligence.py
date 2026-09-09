@@ -421,11 +421,13 @@ def test_graph_export_and_import(tmp_path):
 def test_poc7_pipeline_runner(tmp_path):
     """Test end-to-end POC-7 experiment execution generating all outputs and figures."""
     runner = POC7ExperimentRunner(output_dir=tmp_path)
+    accepted_pairs, _ = runner.load_poc6_inputs()
+    n_pairs = len(accepted_pairs)
     result = runner.run()
 
     assert result["total_nodes"] >= 20
     assert result["total_edges"] >= 30
-    assert len(result["candidate_sites"]) == 3
+    assert len(result["candidate_sites"]) == n_pairs
     assert (tmp_path / "poc7_spatial_knowledge.json").exists()
     assert (tmp_path / "poc7_terrain_intelligence.json").exists()
     assert (tmp_path / "poc7_illumination_intelligence.json").exists()
@@ -440,7 +442,7 @@ def test_poc7_pipeline_runner(tmp_path):
     with open(tmp_path / "poc7_handover_for_poc8.json", "r", encoding="utf-8") as f:
         ho = json.load(f)
     assert ho["target_downstream"] == "POC-8 Habitat Digital Twin Engine"
-    assert len(ho["candidate_sites"]) == 3
+    assert len(ho["candidate_sites"]) == n_pairs
     for s in ho["candidate_sites"]:
         assert "overall_suitability_score" in s
         assert "terrain_score" in s
@@ -455,15 +457,17 @@ def test_poc7_pipeline_runner(tmp_path):
 def test_pipeline_creates_image_and_observation_nodes(tmp_path):
     """ISSUE-2: Verify Image and Observation nodes are created per accepted pair in the pipeline."""
     runner = POC7ExperimentRunner(output_dir=tmp_path)
+    accepted_pairs, _ = runner.load_poc6_inputs()
+    n_pairs = len(accepted_pairs)
     result = runner.run()
     graph = result["graph"]
 
     image_nodes = graph.get_nodes_by_type(NodeType.IMAGE)
     observation_nodes = graph.get_nodes_by_type(NodeType.OBSERVATION)
 
-    # 3 accepted pairs => 6 images (2 per pair) and 6 observations (2 per pair)
-    assert len(image_nodes) == 6, f"Expected 6 Image nodes, got {len(image_nodes)}"
-    assert len(observation_nodes) == 6, f"Expected 6 Observation nodes, got {len(observation_nodes)}"
+    # N accepted pairs => 2*N images (2 per pair) and 2*N observations (2 per pair)
+    assert len(image_nodes) == 2 * n_pairs, f"Expected {2 * n_pairs} Image nodes, got {len(image_nodes)}"
+    assert len(observation_nodes) == 2 * n_pairs, f"Expected {2 * n_pairs} Observation nodes, got {len(observation_nodes)}"
 
     # Verify Image nodes carry product_id and sensor
     for img_node in image_nodes:
@@ -481,6 +485,8 @@ def test_pipeline_creates_image_and_observation_nodes(tmp_path):
 def test_pipeline_creates_has_elevation_edges(tmp_path):
     """ISSUE-3: Verify HAS_ELEVATION edges are created linking terrain patches to elevation data."""
     runner = POC7ExperimentRunner(output_dir=tmp_path)
+    accepted_pairs, _ = runner.load_poc6_inputs()
+    n_pairs = len(accepted_pairs)
     result = runner.run()
     graph = result["graph"]
 
@@ -488,8 +494,8 @@ def test_pipeline_creates_has_elevation_edges(tmp_path):
                       if (e.relationship.value if hasattr(e.relationship, "value") else str(e.relationship))
                       == RelationType.HAS_ELEVATION.value]
 
-    # 3 accepted pairs => 3 query patches => 3 HAS_ELEVATION edges
-    assert len(has_elev_edges) == 3, f"Expected 3 HAS_ELEVATION edges, got {len(has_elev_edges)}"
+    # N accepted pairs => N query patches => N HAS_ELEVATION edges
+    assert len(has_elev_edges) == n_pairs, f"Expected {n_pairs} HAS_ELEVATION edges, got {len(has_elev_edges)}"
 
     # Verify elevation properties on the edge
     for edge in has_elev_edges:
@@ -501,6 +507,8 @@ def test_pipeline_creates_has_elevation_edges(tmp_path):
 def test_pipeline_creates_overlaps_edges(tmp_path):
     """ISSUE-4: Verify OVERLAPS edges are created between accepted correspondent patches."""
     runner = POC7ExperimentRunner(output_dir=tmp_path)
+    accepted_pairs, _ = runner.load_poc6_inputs()
+    n_pairs = len(accepted_pairs)
     result = runner.run()
     graph = result["graph"]
 
@@ -508,8 +516,8 @@ def test_pipeline_creates_overlaps_edges(tmp_path):
                       if (e.relationship.value if hasattr(e.relationship, "value") else str(e.relationship))
                       == RelationType.OVERLAPS.value]
 
-    # 3 accepted pairs => 3 OVERLAPS edges
-    assert len(overlaps_edges) == 3, f"Expected 3 OVERLAPS edges, got {len(overlaps_edges)}"
+    # N accepted pairs => N OVERLAPS edges
+    assert len(overlaps_edges) == n_pairs, f"Expected {n_pairs} OVERLAPS edges, got {len(overlaps_edges)}"
 
     # Each OVERLAPS edge must reference POC-6 confirmation
     for edge in overlaps_edges:
