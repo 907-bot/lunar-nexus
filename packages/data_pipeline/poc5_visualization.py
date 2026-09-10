@@ -36,6 +36,25 @@ DARK_THEME = {
 }
 
 
+from PIL import Image
+
+
+def _crop_valid_extent(arr: np.ndarray, min_content_thresh: float = 0.01) -> np.ndarray:
+    """Crops out empty zero-padded margins so real patch content fills the full canvas."""
+    if not isinstance(arr, np.ndarray) or arr.size == 0:
+        return arr
+    nz = np.nonzero(arr > min_content_thresh)
+    if len(nz[0]) > 0:
+        r0, r1 = nz[0].min(), nz[0].max() + 1
+        c0, c1 = nz[1].min(), nz[1].max() + 1
+        if (r1 - r0) < arr.shape[0] * 0.9 or (c1 - c0) < arr.shape[1] * 0.9:
+            cropped = arr[r0:r1, c0:c1]
+            if cropped.size > 0:
+                pil_im = Image.fromarray((np.clip(cropped, 0.0, 1.0) * 255.0).astype(np.uint8))
+                return np.array(pil_im.resize((256, 256), Image.BILINEAR), dtype=np.float32) / 255.0
+    return arr
+
+
 def generate_all_poc5_figures(
     results_obj: Dict[str, Any],
     patch_pairs: List[Dict[str, Any]],
@@ -56,18 +75,25 @@ def generate_all_poc5_figures(
     gs = GridSpec(1, 6, figure=fig1, width_ratios=[1.2, 0.1, 1, 1, 1, 1])
 
     sample_pair = patch_pairs[0] if patch_pairs else {}
-    q_img = sample_pair.get("source_image", np.zeros((128, 128)))
+    q_img = _crop_valid_extent(sample_pair.get("source_image", np.zeros((128, 128))))
     
     # Subplot 0: Query Patch
     ax_q = fig1.add_subplot(gs[0])
-    ax_q.imshow(q_img, cmap="bone")
+    ax_q.imshow(q_img, cmap="bone", extent=[0, q_img.shape[1]-1, q_img.shape[0]-1, 0])
+    ax_q.set_xlim(0, q_img.shape[1]-1)
+    ax_q.set_ylim(q_img.shape[0]-1, 0)
     ax_q.set_title(f"QUERY: {sample_pair.get('source_id', 'OHRC_0001')}\nCH-2 OHRC (0.25m)", color="#00f2fe", fontsize=9, weight="bold")
     ax_q.axis("off")
+    rect_q = plt.Rectangle((0, 0), q_img.shape[1]-1, q_img.shape[0]-1, fill=False, edgecolor="#00f2fe", linewidth=2.5)
+    ax_q.add_patch(rect_q)
 
     # Divider space
     ax_div = fig1.add_subplot(gs[1])
     ax_div.axis("off")
     ax_div.text(0.5, 0.5, "➔\nTop-K", color="#58a6ff", fontsize=14, ha="center", va="center", weight="bold")
+
+    # Map available candidate images
+    ref_map = {p.get("reference_id"): p.get("reference_image") for p in patch_pairs if "reference_id" in p}
 
     # Top candidates
     q_id = sample_pair.get("source_id", "OHRC_PATCH_0001")
@@ -75,9 +101,16 @@ def generate_all_poc5_figures(
 
     for idx, cand in enumerate(candidates):
         ax_c = fig1.add_subplot(gs[idx + 2])
-        # Find matching candidate image
-        c_img = sample_pair.get("reference_image", np.zeros((128, 128)))
-        ax_c.imshow(c_img, cmap="bone")
+        cand_id = cand.get("candidate_patch_id")
+        raw_c_img = ref_map.get(cand_id)
+        if raw_c_img is None:
+            raw_c_img = patch_pairs[min(idx, len(patch_pairs)-1)].get("reference_image", np.zeros((128, 128))) if patch_pairs else np.zeros((128, 128))
+        
+        c_img = _crop_valid_extent(raw_c_img)
+        ax_c.imshow(c_img, cmap="bone", extent=[0, c_img.shape[1]-1, c_img.shape[0]-1, 0])
+        ax_c.set_xlim(0, c_img.shape[1]-1)
+        ax_c.set_ylim(c_img.shape[0]-1, 0)
+
         is_gt = cand.get("is_ground_truth", False)
         score = cand.get("similarity_score", 0.0)
         rank = cand.get("rank", idx + 1)
@@ -87,8 +120,8 @@ def generate_all_poc5_figures(
         ax_c.set_title(f"#{rank} {cand.get('candidate_patch_id')}\nSim: {score:.3f} | {status_text}", color=border_color, fontsize=8, weight="bold")
         ax_c.axis("off")
         
-        # Border box
-        rect = plt.Rectangle((0, 0), c_img.shape[1]-1, c_img.shape[0]-1, fill=False, edgecolor=border_color, linewidth=2)
+        # Border box hugging 100% of the image boundary
+        rect = plt.Rectangle((0, 0), c_img.shape[1]-1, c_img.shape[0]-1, fill=False, edgecolor=border_color, linewidth=2.5)
         ax_c.add_patch(rect)
 
     fig1.suptitle(f"NEXUS-LUNAR POC-5: Multimodal Cross-Sensor Retrieval\n[{provenance}]", color="#f1f5f9", fontsize=11, weight="bold", y=1.02)

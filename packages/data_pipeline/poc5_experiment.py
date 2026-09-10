@@ -36,6 +36,21 @@ from .poc5_metrics import (
 )
 
 
+def _crop_valid_extent(arr: np.ndarray, min_content_thresh: float = 0.01) -> np.ndarray:
+    """Crops out empty zero-padded margins so real patch content fills the full canvas."""
+    nz = np.nonzero(arr > min_content_thresh)
+    if len(nz[0]) > 0:
+        r0, r1 = nz[0].min(), nz[0].max() + 1
+        c0, c1 = nz[1].min(), nz[1].max() + 1
+        # If there is substantial empty border (> 10% on any edge), crop to real bounding box
+        if (r1 - r0) < arr.shape[0] * 0.9 or (c1 - c0) < arr.shape[1] * 0.9:
+            cropped = arr[r0:r1, c0:c1]
+            if cropped.size > 0:
+                pil_im = Image.fromarray((cropped * 255.0).astype(np.uint8))
+                return np.array(pil_im.resize((256, 256), Image.BILINEAR), dtype=np.float32) / 255.0
+    return arr
+
+
 def load_or_create_poc5_test_collection(
     data_dir: Optional[Path] = None,
     num_pairs: int = 12,
@@ -54,7 +69,12 @@ def load_or_create_poc5_test_collection(
     if data_dir is not None:
         patches_root = data_dir / "processed" / "patches"
         if patches_root.exists():
-            for pair_dir in patches_root.iterdir():
+            # Prioritize high-resolution optical (OHRC) pairs with complete image coverage
+            sorted_dirs = sorted(
+                patches_root.iterdir(),
+                key=lambda d: 0 if "ohr" in d.name.lower() else 1
+            )
+            for pair_dir in sorted_dirs:
                 if pair_dir.is_dir():
                     manifest_file = pair_dir / "patch_manifest.json"
                     if manifest_file.exists():
@@ -67,14 +87,22 @@ def load_or_create_poc5_test_collection(
                                 if src_path.exists() and ref_path.exists():
                                     src_img = Image.open(src_path).convert("L")
                                     ref_img = Image.open(ref_path).convert("L")
+                                    src_arr = np.array(src_img, dtype=np.float32) / 255.0
+                                    ref_arr = np.array(ref_img, dtype=np.float32) / 255.0
+
+                                    # Cleanly crop out any black borders so image fills 100% of canvas
+                                    src_arr = _crop_valid_extent(src_arr)
+                                    ref_arr = _crop_valid_extent(ref_arr)
+
+                                    idx_num = len(pairs) + 1
                                     pairs.append({
-                                        "pair_id": f"PAIR_{p['patch_index']:04d}",
-                                        "source_id": f"OHRC_PATCH_{p['patch_index']:04d}",
-                                        "reference_id": f"LROC_PATCH_{p['patch_index']:04d}",
+                                        "pair_id": f"PAIR_{idx_num:04d}",
+                                        "source_id": f"OHRC_PATCH_{idx_num:04d}",
+                                        "reference_id": f"LROC_PATCH_{idx_num:04d}",
                                         "source_sensor": manifest.get("source_sensor", "OHRC"),
                                         "reference_sensor": manifest.get("reference_sensor", "LRO_NAC"),
-                                        "source_image": np.array(src_img, dtype=np.float32) / 255.0,
-                                        "reference_image": np.array(ref_img, dtype=np.float32) / 255.0,
+                                        "source_image": src_arr,
+                                        "reference_image": ref_arr,
                                         "ground_bbox": p.get("ground_bbox", {"min_lat": -73.2, "max_lat": -73.1, "min_lon": 26.0, "max_lon": 26.1}),
                                         "source_gsd": p.get("effective_resolution_m", 0.25),
                                         "reference_gsd": 1.0,

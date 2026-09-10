@@ -4,7 +4,7 @@
 **Subsystem:** AI-Based Cross-Modal Patch Retrieval & Correspondence Engine  
 **Status:** Completed, Verified, and Ready for POC-6 Geometric Verification  
 **Experiment ID:** `EXP_POC5_DEMO`  
-**Timestamp:** `2026-09-07T16:26:59.824176+00:00`  
+**Timestamp:** `2026-09-10T10:29:46.821996+00:00`  
 **Data Provenance:** `REAL-GEOGRAPHY / SYNTHETIC-MODALITY EXPERIMENT`  
 
 ---
@@ -48,12 +48,12 @@ In multi-sensor lunar co-registration, matching observations across heterogeneou
 
 | Evaluation Metric | AI Multimodal Proxy (128-D) | Pixel Baseline (64-D) | Relative Improvement |
 |---|:---:|:---:|:---:|
-| **Recall@1 (Top-1 Accuracy)** | **9.1%** | 9.1% | **+0.0%** |
-| **Recall@3 (Top-3 Inclusions)** | **18.2%** | 18.2% | **+0.0%** |
-| **Recall@5 (Top-5 Inclusions)** | **27.3%** | 18.2% | **+9.1%** |
-| **Recall@10 (Top-10 Inclusions)** | **27.3%** | 18.2% | **+9.1%** |
-| **Mean Reciprocal Rank (MRR)** | **0.154** | 0.121 | **+0.033** |
-| **Mean Cosine Similarity** | **0.868** | 0.999 | — |
+| **Recall@1 (Top-1 Accuracy)** | **75.0%** | 75.0% | **+0.0%** |
+| **Recall@3 (Top-3 Inclusions)** | **100.0%** | 100.0% | **+0.0%** |
+| **Recall@5 (Top-5 Inclusions)** | **100.0%** | 100.0% | **+0.0%** |
+| **Recall@10 (Top-10 Inclusions)** | **100.0%** | 100.0% | **+0.0%** |
+| **Mean Reciprocal Rank (MRR)** | **0.875** | 0.875 | **+0.000** |
+| **Mean Cosine Similarity** | **0.919** | 0.994 | — |
 
 **Ground Truth Definition:**  
 `Known geographic co-registration patch index pair in common footprint.`
@@ -62,15 +62,15 @@ In multi-sensor lunar co-registration, matching observations across heterogeneou
 
 ## 4. Failure Analysis & Diagnostics
 
-Total Evaluated Queries: **12**  
+Total Evaluated Queries: **14**  
 Failure Case Breakdown:
 - **LOW_TEXTURE:** 0 queries
 - **ILLUMINATION_DISPARITY:** 0 queries
 - **SHADOW_OCCLUSION:** 0 queries
 - **EXTREME_GSD_DISPARITY:** 0 queries
 - **CROSS_MODAL_SPECTRUM_SHIFT:** 0 queries
-- **REPETITIVE_TERRAIN:** 2 queries
-- **WEAK_EMBEDDING_DISCRIMINATION:** 8 queries
+- **REPETITIVE_TERRAIN:** 3 queries
+- **WEAK_EMBEDDING_DISCRIMINATION:** 0 queries
 
 ---
 
