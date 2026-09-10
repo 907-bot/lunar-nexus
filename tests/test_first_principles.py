@@ -114,3 +114,36 @@ def test_biology_engine_eclss_and_radiation_shielding():
     shield_thin = BiologyEngine.compute_radiation_shielding(regolith_shield_thickness_m=0.3)
     assert shield_thin["attenuated_annual_dose_msv_yr"] > 20.0
     assert shield_thin["radiation_safety_verdict"] == "EXCEEDS_CAREER_DOSE_LIMIT"
+
+
+def test_lunar_thermal_pinn():
+    import torch
+    from packages.first_principles.pinn_model import LunarThermalPINN, LunarMultiphysicsPINN
+
+    # 1. Forward pass shape and sanity check
+    pinn = LunarThermalPINN(hidden_dim=32, num_layers=2)
+    t = torch.tensor([[1000.0], [50000.0], [100000.0]])
+    z = torch.tensor([[0.0], [0.5], [1.0]])
+    t_pred = pinn(t, z)
+    assert t_pred.shape == (3, 1)
+    # Check temperatures are in physically reasonable lunar range
+    assert torch.all(t_pred > 20.0) and torch.all(t_pred < 350.0)
+
+    # 2. Autograd PDE Residual computation
+    res, T = pinn.compute_pde_residual(t, z, thermal_diffusivity=1.442e-8)
+    assert res.shape == (3, 1)
+    assert not torch.isnan(res).any()
+
+    # 3. Optimization step & prediction via controller
+    mp_pinn = LunarMultiphysicsPINN(hidden_dim=32, num_layers=2)
+    step_res = mp_pinn.train_step(num_collocation_pts=64)
+    assert "total_loss" in step_res
+    assert step_res["total_loss"] > 0.0
+    assert "pde_residual_rms" in step_res
+
+    # 4. Temperature field prediction across regolith depth
+    profile = mp_pinn.predict_temperature_field(time_fraction=0.5, depth_steps=8, max_depth_m=1.0)
+    assert len(profile["depth_profile"]) == 8
+    assert "governing_pde" in profile
+    assert profile["depth_profile"][0]["depth_cm"] == 0.0
+

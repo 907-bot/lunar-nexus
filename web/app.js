@@ -4098,5 +4098,24 @@ function renderFirstPrinciplesData(data) {
       radVerdictEl.style.color = radVerdictVal.includes('SAFE') ? '#00e676' : '#ff7675';
     }
   }
+
+  // Physics-Informed Neural Network (PINN) Telemetry
+  if (data.pinn) {
+    const pinn = data.pinn;
+    const archEl = document.getElementById('pinnArch');
+    const resEl = document.getElementById('pinnResidualRms');
+    const trapEl = document.getElementById('pinnColdTrap');
+    const objEl = document.getElementById('pinnObjective');
+
+    if (archEl && pinn.neural_architecture) archEl.textContent = pinn.neural_architecture;
+    if (resEl && pinn.pde_residual_rms != null) resEl.textContent = `${pinn.pde_residual_rms}`;
+    if (trapEl && pinn.subsurface_cold_trap_detected != null) {
+      trapEl.textContent = pinn.subsurface_cold_trap_detected ? 'DETECTED (< 110 K)' : 'STABLE SUB-SURFACE';
+      trapEl.style.color = '#00e676';
+    }
+    if (objEl && pinn.total_loss != null) {
+      objEl.textContent = `L_total: ${Number(pinn.total_loss).toFixed(4)}`;
+    }
+  }
 }
 

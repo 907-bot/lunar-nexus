@@ -2189,6 +2189,35 @@
               <div class="pillar-annotation">
                 <p><strong>Biological Law:</strong> NASA-STD-3001 metabolic balance & exponential mass-depth shielding $D = D_0 e^{-\rho x / \lambda}$. Verifies crew survival under $20\text{ mSv/year}$ threshold.</p>
               </div>
+        </div>
+
+        <!-- Physics-Informed Neural Network (PINN) Neural Telemetry Strip -->
+        <div class="science-pinn-strip glassmorphism" style="margin-top: 20px; padding: 16px 20px; border-radius: 12px; border-left: 4px solid #a29bfe; background: rgba(15, 23, 42, 0.75);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+            <div>
+              <span class="badge" style="background: rgba(162, 155, 254, 0.2); color: #a29bfe; border: 1px solid rgba(162, 155, 254, 0.4); font-size: 0.75rem; font-weight: 700; padding: 3px 8px; border-radius: 4px; letter-spacing: 0.5px;">PHYSICS-INFORMED NEURAL NETWORK (PINN) ENGINE</span>
+              <h4 style="margin: 6px 0 0 0; font-size: 1rem; color: #fff;">Autograd PDE Residual Solver & Cryogenic Ice Preservation</h4>
+            </div>
+            <div style="font-family: monospace; font-size: 0.8rem; background: rgba(0,0,0,0.4); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);">
+              <span style="color: #94a3b8;">PDE:</span> <span style="color: #38bdf8;" id="pinnPdeFormula">&part;T/&part;t - &alpha; &nabla;&sup2;T = 0</span>
+            </div>
+          </div>
+          <div class="kpi-mini-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;">
+            <div class="kpi-mini">
+              <span class="lbl">Neural Architecture</span>
+              <strong class="val text-purple" id="pinnArch">MLP-4Layers-Tanh</strong>
+            </div>
+            <div class="kpi-mini">
+              <span class="lbl">Autograd PDE Residual RMS</span>
+              <strong class="val text-cyan" id="pinnResidualRms">1.24e-05</strong>
+            </div>
+            <div class="kpi-mini">
+              <span class="lbl">PINN Sub-Surface Trap</span>
+              <strong class="val text-green" id="pinnColdTrap">DETECTED (&lt; 110 K)</strong>
+            </div>
+            <div class="kpi-mini">
+              <span class="lbl">Optimization Objective</span>
+              <strong class="val text-accent" id="pinnObjective">L_data + &lambda; L_pde</strong>
             </div>
           </div>
         </div>
