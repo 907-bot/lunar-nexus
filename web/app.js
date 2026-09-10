@@ -3894,6 +3894,8 @@ function openSiteModal(site) {
     `;
     modal.style.display = 'flex';
   }
+}
+
 // ==========================================================================
 // First-Principles Scientific Workbench (Physics, Chemistry, Biology, Frequency)
 // ==========================================================================

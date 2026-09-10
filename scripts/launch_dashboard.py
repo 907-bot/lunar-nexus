@@ -44,6 +44,11 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
         parsed = urlparse(self.path)
         path = parsed.path
 
+        if path == "/favicon.ico":
+            self.send_response(204)
+            self.end_headers()
+            return
+
         # 1. API: Catalog Observations
         if path == "/api/catalog":
             self.send_json_response(self.get_catalog_data())
