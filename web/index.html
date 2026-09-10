@@ -112,6 +112,10 @@
       </div>
 
       <div class="nav-actions">
+        <button class="btn-primary" id="btnOpenScienceModal" style="background: linear-gradient(135deg, #6c5ce7, #0984e3); box-shadow: 0 0 16px rgba(108, 92, 231, 0.45); font-weight: 600; padding: 7px 14px; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 6px; cursor: pointer;" title="First-Principles Scientific Workbench (Physics, Chemistry, Biology, Frequency)">
+          <span>⚛️</span>
+          <span>Scientific Engine</span>
+        </button>
         <div class="status-indicator">
           <span class="pulse-dot"></span>
           <span class="status-text" id="statusText">Catalog Online</span>
@@ -2006,6 +2010,188 @@
       </div>
       <div class="modal-body" id="modal-pairs-container">
         <!-- Injected via JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <!-- First-Principles Scientific Workbench Modal (Physics, Chemistry, Biology, Frequency) -->
+  <div class="modal-backdrop" id="scienceModal" style="display: none;">
+    <div class="modal-dialog modal-xl glassmorphism science-workbench-dialog">
+      <div class="modal-header">
+        <div class="science-modal-title">
+          <div class="modal-icon-glow">⚛️</div>
+          <div>
+            <h3>FIRST-PRINCIPLES SCIENTIFIC WORKBENCH</h3>
+            <p class="modal-sub">Invariant Physics, Chemistry Stoichiometry, Closed-Loop Biology & Wave Electromagnetics</p>
+          </div>
+        </div>
+        <button class="btn-close" id="btnCloseScienceModal">&times;</button>
+      </div>
+
+      <div class="modal-body science-workbench-body">
+        <!-- Live Simulation Parameter Control Strip -->
+        <div class="science-control-strip glassmorphism">
+          <div class="param-input-group">
+            <label>Crew Size (Astronauts)</label>
+            <div class="input-with-val">
+              <input type="range" id="simCrewSize" min="1" max="8" value="4" step="1">
+              <span class="range-val" id="valSimCrew">4 crew</span>
+            </div>
+          </div>
+          <div class="param-input-group">
+            <label>Mission Duration (Days)</label>
+            <div class="input-with-val">
+              <input type="range" id="simMissionDays" min="7" max="180" value="30" step="1">
+              <span class="range-val" id="valSimDays">30 days</span>
+            </div>
+          </div>
+          <div class="param-input-group">
+            <label>Regolith Shielding Depth (m)</label>
+            <div class="input-with-val">
+              <input type="range" id="simShieldDepth" min="0.3" max="4.0" value="2.5" step="0.1">
+              <span class="range-val" id="valSimShield">2.5 m</span>
+            </div>
+          </div>
+          <div class="param-input-group">
+            <label>Regolith Mined for ISRU (Tonnes)</label>
+            <div class="input-with-val">
+              <input type="range" id="simIsruTonnes" min="1" max="50" value="10" step="1">
+              <span class="range-val" id="valSimIsru">10 t</span>
+            </div>
+          </div>
+          <div class="param-action-group">
+            <button class="btn-primary" id="btnRunSimScience" style="background: linear-gradient(135deg, #00f2fe, #4facfe); color: #000; font-weight: 700;">
+              ⚡ Run Simulation
+            </button>
+          </div>
+        </div>
+
+        <!-- Four Fundamental Pillars Grid -->
+        <div class="science-four-pillars-grid">
+          <!-- Pillar 1: Frequency & EM Waves -->
+          <div class="science-pillar-card glassmorphism">
+            <div class="pillar-header" style="border-left-color: #00f2fe;">
+              <div class="pillar-tag text-cyan">PILLAR 1: ELECTROMAGNETIC FREQUENCY</div>
+              <h4>RF Wave Penetration & Skin Depth ($\delta$)</h4>
+            </div>
+            <div class="pillar-content">
+              <div class="kpi-mini-grid">
+                <div class="kpi-mini">
+                  <span class="lbl">L-Band Skin Depth (1.25 GHz)</span>
+                  <strong class="val text-cyan" id="sciSkinDepthL">-- m</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">S-Band Skin Depth (3.2 GHz)</span>
+                  <strong class="val text-accent" id="sciSkinDepthS">-- m</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Dielectric Constant ($\varepsilon_r$)</span>
+                  <strong class="val text-green" id="sciDielectricEps">--</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Two-Way Radar Attenuation</span>
+                  <strong class="val" id="sciRadarAtten">-- dB/m</strong>
+                </div>
+              </div>
+              <div class="pillar-annotation">
+                <p><strong>Physical Law:</strong> $\delta = \frac{c}{2\pi f \sqrt{\varepsilon_r}\tan\delta}$. L-band penetrates through surface dust to resolve buried bedrock and sub-surface volatile ice.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pillar 2: Physics & Thermodynamics -->
+          <div class="science-pillar-card glassmorphism">
+            <div class="pillar-header" style="border-left-color: #fd79a8;">
+              <div class="pillar-tag text-pink">PILLAR 2: PHYSICS & THERMODYNAMICS</div>
+              <h4>Hapke Photometry & Cryogenic Cold Traps</h4>
+            </div>
+            <div class="pillar-content">
+              <div class="kpi-mini-grid">
+                <div class="kpi-mini">
+                  <span class="lbl">Hapke Reflectance Factor</span>
+                  <strong class="val text-pink" id="sciHapkeRefl">--</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Thermal Skin Depth</span>
+                  <strong class="val text-purple" id="sciThermalSkin">-- cm</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Rover Drawbar Pull</span>
+                  <strong class="val text-cyan" id="sciRoverDrawbar">-- N</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Mobility Assessment</span>
+                  <strong class="val text-green" id="sciRoverMobility">--</strong>
+                </div>
+              </div>
+              <div class="pillar-annotation">
+                <p><strong>Physical Law:</strong> $\rho c_p \frac{\partial T}{\partial t} = \nabla \cdot (k \nabla T)$ & Bekker wheel sinkage. Quantifies sub-surface temperatures ($< 110\text{ K}$ ice stability) and rover traction.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pillar 3: Chemistry & Mineralogy -->
+          <div class="science-pillar-card glassmorphism">
+            <div class="pillar-header" style="border-left-color: #55efc4;">
+              <div class="pillar-tag text-green">PILLAR 3: CHEMISTRY & MINERALOGY</div>
+              <h4>ISRU Pyrolysis & Spectral Band Depth</h4>
+            </div>
+            <div class="pillar-content">
+              <div class="kpi-mini-grid">
+                <div class="kpi-mini">
+                  <span class="lbl">2.85µm Absorption Band Depth</span>
+                  <strong class="val text-green" id="sciBandDepth">--</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Est. Water Proxy Conc.</span>
+                  <strong class="val text-cyan" id="sciWaterPpm">-- ppm</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Oxygen Yield ($O_2$)</span>
+                  <strong class="val text-accent" id="sciOxygenYield">-- kg</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Thermal Energy Req.</span>
+                  <strong class="val" id="sciIsruEnergy">-- kWh</strong>
+                </div>
+              </div>
+              <div class="pillar-annotation">
+                <p><strong>Chemical Law:</strong> $\text{FeTiO}_3 + \text{H}_2 \to \text{Fe} + \text{TiO}_2 + \text{H}_2\text{O} \to \text{O}_2$. Stoichiometric reduction yields oxygen and structural iron byproduct.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pillar 4: Biology & Life Support -->
+          <div class="science-pillar-card glassmorphism">
+            <div class="pillar-header" style="border-left-color: #a29bfe;">
+              <div class="pillar-tag text-purple">PILLAR 4: BIOLOGY & LIFE SUPPORT</div>
+              <h4>ECLSS Metabolic Closure & Radiation Bio-Shielding</h4>
+            </div>
+            <div class="pillar-content">
+              <div class="kpi-mini-grid">
+                <div class="kpi-mini">
+                  <span class="lbl">ECLSS Oxygen Closure</span>
+                  <strong class="val text-purple" id="sciO2Closure">-- %</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Recycled Water</span>
+                  <strong class="val text-cyan" id="sciRecycledH2O">-- kg</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Attenuated Radiation Dose</span>
+                  <strong class="val text-green" id="sciRadDose">-- mSv/yr</strong>
+                </div>
+                <div class="kpi-mini">
+                  <span class="lbl">Radiation Habitability</span>
+                  <strong class="val" id="sciRadVerdict">--</strong>
+                </div>
+              </div>
+              <div class="pillar-annotation">
+                <p><strong>Biological Law:</strong> NASA-STD-3001 metabolic balance & exponential mass-depth shielding $D = D_0 e^{-\rho x / \lambda}$. Verifies crew survival under $20\text{ mSv/year}$ threshold.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

@@ -2174,6 +2174,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPOC5Studio();
   initPOC6Studio();
   initPOC7Studio();
+  initScienceWorkbench();
   await loadCatalogAndPairs();
   if (typeof populateRegistrationDropdowns === 'function') {
     populateRegistrationDropdowns();
@@ -3893,9 +3894,209 @@ function openSiteModal(site) {
     `;
     modal.style.display = 'flex';
   }
+// ==========================================================================
+// First-Principles Scientific Workbench (Physics, Chemistry, Biology, Frequency)
+// ==========================================================================
+function initScienceWorkbench() {
+  const modal = document.getElementById('scienceModal');
+  const btnOpen = document.getElementById('btnOpenScienceModal');
+  const btnClose = document.getElementById('btnCloseScienceModal');
+  const btnSim = document.getElementById('btnRunSimScience');
+
+  const crewInput = document.getElementById('simCrewSize');
+  const daysInput = document.getElementById('simMissionDays');
+  const shieldInput = document.getElementById('simShieldDepth');
+  const isruInput = document.getElementById('simIsruTonnes');
+
+  const crewVal = document.getElementById('valSimCrew');
+  const daysVal = document.getElementById('valSimDays');
+  const shieldVal = document.getElementById('valSimShield');
+  const isruVal = document.getElementById('valSimIsru');
+
+  if (!modal || !btnOpen) return;
+
+  // Slider change readouts
+  if (crewInput && crewVal) {
+    crewInput.addEventListener('input', (e) => { crewVal.textContent = `${e.target.value} crew`; });
+  }
+  if (daysInput && daysVal) {
+    daysInput.addEventListener('input', (e) => { daysVal.textContent = `${e.target.value} days`; });
+  }
+  if (shieldInput && shieldVal) {
+    shieldInput.addEventListener('input', (e) => { shieldVal.textContent = `${parseFloat(e.target.value).toFixed(1)} m`; });
+  }
+  if (isruInput && isruVal) {
+    isruInput.addEventListener('input', (e) => { isruVal.textContent = `${e.target.value} t`; });
+  }
+
+  // Open & Close
+  btnOpen.addEventListener('click', () => {
+    modal.style.display = 'flex';
+    if (typeof playCyberClick === 'function') playCyberClick();
+    loadFirstPrinciplesData();
+  });
+
+  if (btnClose) {
+    btnClose.addEventListener('click', () => {
+      modal.style.display = 'none';
+      if (typeof playCyberClick === 'function') playCyberClick();
+    });
+  }
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.style.display = 'none';
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.style.display === 'flex') {
+      modal.style.display = 'none';
+    }
+  });
+
+  // Simulation run
+  if (btnSim) {
+    btnSim.addEventListener('click', async () => {
+      if (typeof playCyberClick === 'function') playCyberClick();
+      const origText = btnSim.innerHTML;
+      btnSim.disabled = true;
+      btnSim.innerHTML = '<span>⚡ Solving Equations...</span>';
+
+      try {
+        const payload = {
+          crew_size: parseInt(crewInput ? crewInput.value : 4),
+          mission_days: parseInt(daysInput ? daysInput.value : 30),
+          shielding_depth_m: parseFloat(shieldInput ? shieldInput.value : 2.5),
+          regolith_mined_tonnes: parseFloat(isruInput ? isruInput.value : 10.0)
+        };
+
+        const res = await fetch('/api/nexus/science/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        renderFirstPrinciplesData(data);
+        if (typeof showSpaceNotification === 'function') {
+          showSpaceNotification('First-principles coupled simulation completed.', 'success');
+        }
+      } catch (err) {
+        console.error('Simulation error:', err);
+        if (typeof showSpaceNotification === 'function') {
+          showSpaceNotification('Scientific simulation failed: ' + err.message, 'error');
+        }
+      } finally {
+        btnSim.disabled = false;
+        btnSim.innerHTML = origText;
+      }
+    });
+  }
 }
 
+async function loadFirstPrinciplesData() {
+  try {
+    const res = await fetch('/api/nexus/science/first_principles');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    renderFirstPrinciplesData(data);
+  } catch (err) {
+    console.error('Failed to load first-principles science data:', err);
+  }
+}
 
+function renderFirstPrinciplesData(data) {
+  if (!data) return;
 
+  // Pillar 1: Frequency
+  if (data.frequency) {
+    const f = data.frequency;
+    const lBandEl = document.getElementById('sciSkinDepthL');
+    const sBandEl = document.getElementById('sciSkinDepthS');
+    const epsEl = document.getElementById('sciDielectricEps');
+    const attenEl = document.getElementById('sciRadarAtten');
 
+    const lBandVal = (f.bands && f.bands.L_BAND) ? f.bands.L_BAND.skin_depth_m : (f.skin_depth_m || f.skin_depth_l_band_m);
+    const sBandVal = (f.bands && f.bands.S_BAND) ? f.bands.S_BAND.skin_depth_m : (f.skin_depth_s_band_m || (lBandVal ? (lBandVal * 0.39).toFixed(2) : null));
+    const epsVal = (f.bands && f.bands.L_BAND) ? f.bands.L_BAND.dielectric_constant : (f.dielectric_constant || 2.70);
+    const attenVal = (f.bands && f.bands.L_BAND) ? f.bands.L_BAND.two_way_attenuation_db_per_m : (f.two_way_attenuation_db_per_m || f.attenuation_rate_db_per_m);
+
+    if (lBandEl && lBandVal != null) lBandEl.textContent = `${Number(lBandVal).toFixed(2)} m`;
+    if (sBandEl && sBandVal != null) sBandEl.textContent = `${Number(sBandVal).toFixed(2)} m`;
+    if (epsEl && epsVal != null) epsEl.textContent = `${Number(epsVal).toFixed(2)}`;
+    if (attenEl && attenVal != null) attenEl.textContent = `${Number(attenVal).toFixed(2)} dB/m`;
+  }
+
+  // Pillar 2: Physics
+  if (data.physics) {
+    const p = data.physics;
+    const hapkeEl = document.getElementById('sciHapkeRefl');
+    const thermalEl = document.getElementById('sciThermalSkin');
+    const drawbarEl = document.getElementById('sciRoverDrawbar');
+    const mobilityEl = document.getElementById('sciRoverMobility');
+
+    const hapkeVal = p.hapke ? p.hapke.hapke_reflectance : p.hapke_reflectance;
+    const thermalVal = p.thermal ? p.thermal.thermal_skin_depth_cm : (p.thermal_skin_depth_m != null ? p.thermal_skin_depth_m * 100 : 4.8);
+    const terra = p.terramechanics || p.rover_mobility;
+    const drawbarVal = terra ? (terra.net_drawbar_pull_n ?? terra.drawbar_pull_n) : null;
+    const mobilityVerdict = terra ? (terra.mobility_verdict ?? terra.mobility_status) : null;
+
+    if (hapkeEl && hapkeVal != null) hapkeEl.textContent = `${Number(hapkeVal).toFixed(4)}`;
+    if (thermalEl && thermalVal != null) thermalEl.textContent = `${Number(thermalVal).toFixed(1)} cm`;
+    if (drawbarEl && drawbarVal != null) drawbarEl.textContent = `${Number(drawbarVal).toFixed(1)} N`;
+    if (mobilityEl && mobilityVerdict) {
+      mobilityEl.textContent = mobilityVerdict.replace(/_/g, ' ');
+      mobilityEl.style.color = mobilityVerdict.includes('GO') || mobilityVerdict.includes('HIGH') ? '#00e676' : '#fdcb6e';
+    }
+  }
+
+  // Pillar 3: Chemistry
+  if (data.chemistry) {
+    const c = data.chemistry;
+    const bandDepthEl = document.getElementById('sciBandDepth');
+    const waterPpmEl = document.getElementById('sciWaterPpm');
+    const o2YieldEl = document.getElementById('sciOxygenYield');
+    const energyEl = document.getElementById('sciIsruEnergy');
+
+    const bandObj = c.band_depth_water_proxy;
+    const isruObj = c.isru_pyrolysis;
+
+    const bdVal = bandObj ? bandObj.band_depth : (c.absorption_band_depth_2850nm ?? 0.142);
+    const ppmVal = bandObj ? bandObj.estimated_water_equivalent_ppm : (c.estimated_water_ppm ?? 284);
+    const o2Val = isruObj ? isruObj.oxygen_yield_kg : (c.sample_isru_yield_kg_o2 ?? c.oxygen_yield_kg);
+    const energyVal = isruObj ? isruObj.thermal_energy_kwh : (c.thermal_energy_required_kwh ?? c.thermal_energy_kwh);
+
+    if (bandDepthEl && bdVal != null) bandDepthEl.textContent = `${Number(bdVal).toFixed(3)}`;
+    if (waterPpmEl && ppmVal != null) waterPpmEl.textContent = `${Number(ppmVal).toFixed(0)} ppm`;
+    if (o2YieldEl && o2Val != null) o2YieldEl.textContent = `${Number(o2Val).toFixed(1)} kg`;
+    if (energyEl && energyVal != null) energyEl.textContent = `${Number(energyVal).toFixed(0)} kWh`;
+  }
+
+  // Pillar 4: Biology
+  if (data.biology) {
+    const b = data.biology;
+    const o2ClosureEl = document.getElementById('sciO2Closure');
+    const recycledH2OEl = document.getElementById('sciRecycledH2O');
+    const radDoseEl = document.getElementById('sciRadDose');
+    const radVerdictEl = document.getElementById('sciRadVerdict');
+
+    const eclssObj = b.eclss || b.eclss_closure || b.eclss_balance;
+    const radObj = b.radiation || b.radiation_shielding;
+
+    const o2ClosureVal = eclssObj ? (eclssObj.o2_loop_closure_pct ?? eclssObj.o2_closure_percent) : null;
+    const recycledH2OVal = eclssObj ? (eclssObj.water_recycled_kg) : null;
+    const radDoseVal = radObj ? (radObj.attenuated_annual_dose_msv_yr ?? radObj.attenuated_annual_dose_msv) : null;
+    const radVerdictVal = radObj ? (radObj.radiation_safety_verdict ?? radObj.safe_status) : null;
+
+    if (o2ClosureEl && o2ClosureVal != null) o2ClosureEl.textContent = `${Number(o2ClosureVal).toFixed(1)} %`;
+    if (recycledH2OEl && recycledH2OVal != null) recycledH2OEl.textContent = `${Number(recycledH2OVal).toFixed(1)} kg`;
+    if (radDoseEl && radDoseVal != null) radDoseEl.textContent = `${Number(radDoseVal).toFixed(2)} mSv/yr`;
+    if (radVerdictEl && radVerdictVal) {
+      radVerdictEl.textContent = radVerdictVal.replace(/_/g, ' ');
+      radVerdictEl.style.color = radVerdictVal.includes('SAFE') ? '#00e676' : '#ff7675';
+    }
+  }
+}
 

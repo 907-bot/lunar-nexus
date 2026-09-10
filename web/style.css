@@ -3761,3 +3761,206 @@ body.nexus-theme {
     height: 450px;
   }
 }
+
+/* ==========================================================================
+   FIRST-PRINCIPLES SCIENTIFIC WORKBENCH MODAL STYLING
+   ========================================================================== */
+.science-workbench-dialog {
+  max-width: 1300px;
+  width: 95vw;
+  max-height: 92vh;
+  display: flex;
+  flex-direction: column;
+  background: rgba(8, 12, 24, 0.94);
+  border: 1px solid rgba(0, 242, 254, 0.35);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 35px rgba(108, 92, 231, 0.25);
+  border-radius: 14px;
+  overflow: hidden;
+  margin: auto;
+}
+
+.science-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.science-modal-title h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #fff;
+}
+
+.science-modal-title .modal-sub {
+  margin: 2px 0 0 0;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.modal-icon-glow {
+  font-size: 1.5rem;
+  background: rgba(108, 92, 231, 0.2);
+  border: 1px solid rgba(108, 92, 231, 0.4);
+  border-radius: 10px;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.science-workbench-body {
+  padding: 18px 24px 24px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.science-control-strip {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px 20px;
+  background: rgba(13, 20, 36, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  flex-wrap: wrap;
+}
+
+.param-input-group {
+  flex: 1;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.param-input-group label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.input-with-val {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.input-with-val input[type="range"] {
+  flex: 1;
+  accent-color: #00f2fe;
+}
+
+.input-with-val .range-val {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #00f2fe;
+  min-width: 55px;
+  text-align: right;
+}
+
+.param-action-group {
+  display: flex;
+  align-items: flex-end;
+}
+
+.science-four-pillars-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1050px) {
+  .science-four-pillars-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.science-pillar-card {
+  background: rgba(11, 16, 30, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.pillar-header {
+  padding: 12px 18px;
+  background: rgba(16, 24, 44, 0.7);
+  border-left: 4px solid var(--accent-cyan);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pillar-header .pillar-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.pillar-header h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.pillar-content {
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.kpi-mini-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.kpi-mini {
+  background: rgba(5, 8, 16, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-mini .lbl {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+}
+
+.kpi-mini .val {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #dfe6e9;
+}
+
+.pillar-annotation {
+  background: rgba(0, 0, 0, 0.4);
+  border-left: 3px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0 6px 6px 0;
+  padding: 8px 12px;
+}
+
+.pillar-annotation p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #b2bec3;
+  line-height: 1.45;
+}

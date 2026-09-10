@@ -454,6 +454,43 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                     self.send_error(404, f"Observation image preview for {product_id} not found")
                     return
 
+        # 3j-4. API: First-Principles Scientific Engine Telemetry (Physics, Chemistry, Biology, Frequency)
+        if path == "/api/nexus/science/first_principles":
+            try:
+                from packages.first_principles import (
+                    FrequencyEngine,
+                    PhysicsEngine,
+                    ChemistryEngine,
+                    BiologyEngine,
+                )
+                res = {
+                    "status": "SUCCESS",
+                    "target_region": "Boguslawsky South Pole (-73.25°S, 26.00°E)",
+                    "frequency": FrequencyEngine.analyze_multi_frequency_penetration(bulk_density=1.6, tio2_pct=5.5),
+                    "physics": {
+                        "hapke": PhysicsEngine.compute_hapke_reflectance(incidence_deg=65.0, emission_deg=10.0, phase_deg=55.0),
+                        "thermal": PhysicsEngine.simulate_subsurface_thermal_profile(max_surface_temp_k=230.0, min_surface_temp_k=45.0),
+                        "terramechanics": PhysicsEngine.compute_rover_terramechanics(rover_mass_kg=350.0, slope_deg=12.0),
+                    },
+                    "chemistry": {
+                        "band_depth_water_proxy": ChemistryEngine.compute_band_depth(
+                            wavelengths_um=[2.4, 2.55, 2.7, 2.85, 3.0, 3.15, 3.3],
+                            reflectance=[0.25, 0.26, 0.24, 0.20, 0.23, 0.27, 0.28],
+                            band_center_um=2.85,
+                        ),
+                        "isru_pyrolysis": ChemistryEngine.compute_isru_oxygen_yield(regolith_tonnes=10.0, ilmenite_weight_pct=4.5),
+                    },
+                    "biology": {
+                        "eclss_closure": BiologyEngine.simulate_habitat_eclss(crew_size=4, mission_duration_days=30),
+                        "radiation_shielding": BiologyEngine.compute_radiation_shielding(regolith_shield_thickness_m=2.5),
+                    }
+                }
+                self.send_json_response(res)
+            except Exception as e:
+                logger.error(f"First-principles science error: {e}", exc_info=True)
+                self.send_error(500, f"Scientific computation failed: {e}")
+            return
+
         # 3k. API: Blender MCP Server Status (POC 8)
         if path == "/api/nexus/blender/status":
             try:
@@ -688,6 +725,62 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
             except Exception as e:
                 logger.error(f"Blender build execution error: {e}", exc_info=True)
                 self.send_error(500, f"Blender build failed: {str(e)}")
+            return
+
+        # 3l. API: First-Principles Simulation Experiment Runner
+        if path == "/api/nexus/science/simulate":
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(content_length).decode("utf-8")
+            try:
+                payload = json.loads(body) if body else {}
+                from packages.first_principles import (
+                    FrequencyEngine,
+                    PhysicsEngine,
+                    ChemistryEngine,
+                    BiologyEngine,
+                )
+                crew = int(payload.get("crew_size", 4))
+                days = int(payload.get("mission_days", 30))
+                shield_m = float(payload.get("regolith_shield_m") or payload.get("shielding_depth_m") or 2.5)
+                tonnes = float(payload.get("regolith_tonnes_isru") or payload.get("regolith_mined_tonnes") or 10.0)
+                ilmenite_pct = float(payload.get("ilmenite_pct", 4.5))
+                incidence_deg = float(payload.get("solar_incidence_deg", 65.0))
+                freq_ghz = float(payload.get("radar_freq_ghz", 1.25))
+
+                res = {
+                    "status": "SUCCESS",
+                    "simulation_inputs": {
+                        "crew_size": crew,
+                        "mission_days": days,
+                        "regolith_shield_m": shield_m,
+                        "regolith_tonnes_isru": tonnes,
+                        "ilmenite_pct": ilmenite_pct,
+                        "solar_incidence_deg": incidence_deg,
+                        "radar_freq_ghz": freq_ghz,
+                    },
+                    "frequency": FrequencyEngine.compute_skin_depth(freq_ghz * 1e9, bulk_density_g_cm3=1.6, tio2_pct=ilmenite_pct),
+                    "physics": {
+                        "hapke": PhysicsEngine.compute_hapke_reflectance(incidence_deg=incidence_deg, emission_deg=10.0, phase_deg=55.0),
+                        "thermal": PhysicsEngine.simulate_subsurface_thermal_profile(max_surface_temp_k=230.0, min_surface_temp_k=45.0),
+                        "terramechanics": PhysicsEngine.compute_rover_terramechanics(rover_mass_kg=350.0, slope_deg=12.0),
+                    },
+                    "chemistry": {
+                        "band_depth_water_proxy": ChemistryEngine.compute_band_depth(
+                            wavelengths_um=[2.4, 2.55, 2.7, 2.85, 3.0, 3.15, 3.3],
+                            reflectance=[0.25, 0.26, 0.24, 0.20, 0.23, 0.27, 0.28],
+                            band_center_um=2.85,
+                        ),
+                        "isru_pyrolysis": ChemistryEngine.compute_isru_oxygen_yield(regolith_tonnes=tonnes, ilmenite_weight_pct=ilmenite_pct),
+                    },
+                    "biology": {
+                        "eclss": BiologyEngine.simulate_habitat_eclss(crew_size=crew, mission_duration_days=days),
+                        "radiation": BiologyEngine.compute_radiation_shielding(regolith_shield_thickness_m=shield_m),
+                    }
+                }
+                self.send_json_response(res)
+            except Exception as e:
+                logger.error(f"First-principles simulation error: {e}", exc_info=True)
+                self.send_error(500, f"Simulation failed: {e}")
             return
 
         self.send_error(404, "Endpoint not found")

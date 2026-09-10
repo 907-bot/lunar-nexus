@@ -25,6 +25,11 @@ class NodeType(str, enum.Enum):
     SPECTRAL_OBSERVATION = "Spectral Observation"
     CANDIDATE_SITE = "Candidate Site"
     HABITAT_COMPONENT = "Habitat Component"
+    # First-Principles Scientific Node Types
+    PHYSICAL_LAYER = "Physical Layer"
+    THERMOCHEMICAL_STATE = "Thermochemical State"
+    BIOLOGICAL_ENVELOPE = "Biological Envelope"
+    FREQUENCY_SPECTRUM = "Frequency Spectrum"
 
 
 class RelationType(str, enum.Enum):
@@ -39,6 +44,12 @@ class RelationType(str, enum.Enum):
     HAS_RESOURCE_INDICATOR = "HAS_RESOURCE_INDICATOR"
     SUITABLE_FOR = "SUITABLE_FOR"
     CONSTRAINS = "CONSTRAINS"
+    # First-Principles Scientific Relation Types
+    HAS_FREQUENCY_PROFILE = "HAS_FREQUENCY_PROFILE"
+    HAS_THERMAL_PROFILE = "HAS_THERMAL_PROFILE"
+    YIELDS_VOLATILE = "YIELDS_VOLATILE"
+    SHIELDS_RADIATION = "SHIELDS_RADIATION"
+    SUPPORTS_ECLSS = "SUPPORTS_ECLSS"
 
 
 class SlopeCategory(str, enum.Enum):

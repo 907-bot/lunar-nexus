@@ -17,6 +17,13 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
+from packages.first_principles import (
+    FrequencyEngine,
+    PhysicsEngine,
+    ChemistryEngine,
+    BiologyEngine,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -84,6 +91,7 @@ class BaseLayoutPlan:
     all_constraints_passed: bool
     total_power_capacity_kw: float
     total_footprint_area_m2: float
+    first_principles_science: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -94,6 +102,7 @@ class BaseLayoutPlan:
             "footprint_area_m2": round(self.total_footprint_area_m2, 1),
             "modules": [m.to_dict() for m in self.modules],
             "constraint_verification": [c.to_dict() for c in self.constraint_checks],
+            "first_principles_science": self.first_principles_science,
         }
 
 
@@ -321,6 +330,14 @@ class HabitatConstraintPlanner:
         all_passed = all(c.is_satisfied for c in checks)
         total_footprint = float(sum(np.pi * (m.radius_m**2) for m in modules))
 
+        science = {
+            "eclss": BiologyEngine.simulate_habitat_eclss(crew_size=4, mission_duration_days=30),
+            "radiation": BiologyEngine.compute_radiation_shielding(regolith_shield_thickness_m=2.8),
+            "isru": ChemistryEngine.compute_isru_oxygen_yield(regolith_tonnes=12.0, ilmenite_weight_pct=4.5),
+            "subsurface_thermal": PhysicsEngine.simulate_subsurface_thermal_profile(max_surface_temp_k=230.0, min_surface_temp_k=45.0),
+            "frequency_radar": FrequencyEngine.analyze_multi_frequency_penetration(bulk_density=1.6, tio2_pct=6.0),
+        }
+
         return BaseLayoutPlan(
             site_id=site_id,
             site_name=site_name,
@@ -329,6 +346,7 @@ class HabitatConstraintPlanner:
             all_constraints_passed=all_passed,
             total_power_capacity_kw=150.0,
             total_footprint_area_m2=total_footprint,
+            first_principles_science=science,
         )
 
 
