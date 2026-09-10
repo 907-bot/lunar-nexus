@@ -321,6 +321,8 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                         "candidate_site_explanation": "/outputs/poc7/candidate_site_explanation.png",
                     }
                 }
+                self.send_json_response(resp)
+            else:
                 self.send_error(404, "POC 7 demo artifacts not generated yet. Run scripts/demo_poc7.py")
             return
 
@@ -371,6 +373,86 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
             except Exception as e:
                 self.send_error(500, f"Failed to retrieve job: {str(e)}")
             return
+
+        # 3j-2. API: Registration Artifacts Streaming & Results
+        if path.startswith("/api/v1/registration/") or path.startswith("/api/registration/"):
+            parts = path.strip("/").split("/")
+            job_id = None
+            artifact = None
+            if len(parts) >= 4 and parts[1] == "v1" and parts[2] == "registration":
+                job_id = parts[3]
+                artifact = parts[4] if len(parts) >= 5 else None
+            elif len(parts) >= 3 and parts[1] == "registration":
+                job_id = parts[2]
+                artifact = parts[3] if len(parts) >= 4 else None
+
+            if job_id:
+                job_dir = PROJECT_ROOT / "data" / "registration_jobs" / job_id
+                if artifact:
+                    artifact_clean = artifact.replace(".png", "")
+                    target_img = job_dir / f"{artifact_clean}.png"
+                    if target_img.exists():
+                        self.serve_file(target_img, "image/png")
+                        return
+                    else:
+                        self.send_error(404, f"Registration artifact '{artifact}' for job {job_id} not found")
+                        return
+                else:
+                    res_file = job_dir / "result.json"
+                    if res_file.exists():
+                        with open(res_file, "r", encoding="utf-8") as f:
+                            self.send_json_response(json.load(f))
+                        return
+                    else:
+                        self.send_error(404, f"Registration job {job_id} not found")
+                        return
+
+        # 3j-3. API: Observation Image & Preview Streaming
+        if path.startswith("/api/v1/observations/") or path.startswith("/api/observations/"):
+            parts = path.strip("/").split("/")
+            product_id = None
+            is_preview = "preview" in parts
+            if len(parts) >= 4 and parts[1] == "v1":
+                product_id = parts[3]
+            elif len(parts) >= 3 and parts[1] == "observations":
+                product_id = parts[2]
+
+            if product_id:
+                cat_path = PROJECT_ROOT / "data" / "catalog.json"
+                target_file = None
+                if cat_path.exists():
+                    try:
+                        with open(cat_path, "r", encoding="utf-8") as f:
+                            cat = json.load(f)
+                        if product_id in cat:
+                            entry = cat[product_id]
+                            if is_preview:
+                                p_str = entry.get("preview_image_path") or entry.get("primary_image_path")
+                            else:
+                                p_str = entry.get("primary_image_path") or entry.get("preview_image_path")
+                            if p_str:
+                                cand = PROJECT_ROOT / p_str.lstrip("/\\")
+                                if cand.exists():
+                                    target_file = cand
+                    except Exception as e:
+                        logger.warning(f"Error resolving preview for {product_id}: {e}")
+
+                if not target_file or not target_file.exists():
+                    raw_dir = PROJECT_ROOT / "data" / "raw"
+                    for match in raw_dir.rglob(f"{product_id}*.png"):
+                        if match.is_file():
+                            target_file = match
+                            break
+
+                if target_file and target_file.exists():
+                    mime = "image/png"
+                    if target_file.suffix.lower() in (".jpg", ".jpeg"):
+                        mime = "image/jpeg"
+                    self.serve_file(target_file, mime)
+                    return
+                else:
+                    self.send_error(404, f"Observation image preview for {product_id} not found")
+                    return
 
         # 3k. API: Blender MCP Server Status (POC 8)
         if path == "/api/nexus/blender/status":
@@ -447,6 +529,29 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
             self.serve_file(WEB_DIR / "three.min.js", "application/javascript")
             return
 
+        # 4b. Direct Static Assets Serving for outputs/ and data/
+        if path.startswith("/outputs/") or path.startswith("/data/"):
+            target_path = PROJECT_ROOT / path.lstrip("/")
+            if target_path.exists() and target_path.is_file():
+                ext = target_path.suffix.lower()
+                mime = "application/octet-stream"
+                if ext == ".png":
+                    mime = "image/png"
+                elif ext in (".jpg", ".jpeg"):
+                    mime = "image/jpeg"
+                elif ext == ".json":
+                    mime = "application/json"
+                elif ext == ".xml":
+                    mime = "application/xml"
+                elif ext == ".svg":
+                    mime = "image/svg+xml"
+                elif ext == ".css":
+                    mime = "text/css"
+                elif ext == ".js":
+                    mime = "application/javascript"
+                self.serve_file(target_path, mime)
+                return
+
         # 5. Serve images and files from data directory
         super().do_GET()
 
@@ -473,11 +578,15 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                 payload = json.loads(body) if body else {}
                 from services.registration.server import ClassicalRegistrationService
                 service = ClassicalRegistrationService()
+                src_val = payload.get("source_id") or payload.get("source_image") or "ch2_ohr_ncp_20230915t041230_boguslawsky_d18"
+                ref_val = payload.get("reference_id") or payload.get("reference_image") or "M1345982701LR_BOGUSLAWSKY_REF"
+                method_val = payload.get("method") or "SIFT"
+                trans_val = payload.get("transform") or payload.get("transform_type") or "Homography"
                 result = service.execute_registration(
-                    source_id=payload.get("source_id", "ch2_ohr_ncp_20230915t041230_boguslawsky_d18"),
-                    reference_id=payload.get("reference_id", "M1345982701LR_BOGUSLAWSKY_REF"),
-                    method_str=payload.get("method", "SIFT"),
-                    transform_type_str=payload.get("transform", "Homography"),
+                    source_id=src_val,
+                    reference_id=ref_val,
+                    method_str=method_val,
+                    transform_type_str=trans_val,
                     ratio_thresh=float(payload.get("ratio_thresh", 0.75)),
                     ransac_thresh_px=float(payload.get("ransac_thresh_px", 3.0)),
                 )

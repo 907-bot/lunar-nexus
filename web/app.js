@@ -924,18 +924,32 @@ function initNexus3DStudio() {
   // 10. View Mode Switcher Handlers
   const btnModeGlobe = document.getElementById('btnModeGlobe');
   const btnModeSurface = document.getElementById('btnModeSurface');
+  const btnModeBlender = document.getElementById('btnModeBlender');
+  const blenderContainer = document.getElementById('nexus3dBlenderContainer');
+  const canvasContainer = document.getElementById('nexus3dCanvasContainer');
 
   function setViewMode(mode) {
     n3d.viewMode = mode;
-    if (mode === 'globe') {
+    [btnModeGlobe, btnModeSurface, btnModeBlender].forEach(b => b?.classList.remove('active'));
+
+    if (mode === 'blender') {
+      if (btnModeBlender) btnModeBlender.classList.add('active');
+      if (blenderContainer) blenderContainer.classList.add('active');
+      if (canvasContainer) canvasContainer.style.display = 'none';
+      const blenderImg = document.getElementById('blenderInStudioImg');
+      if (blenderImg) blenderImg.src = `/outputs/nexus_3d/nexus_blender_digital_twin.png?t=${Date.now()}`;
+      showToast('Switched to Blender Cycles 4K Raytraced Digital Twin View', '🪐');
+    } else if (mode === 'globe') {
       if (btnModeGlobe) btnModeGlobe.classList.add('active');
-      if (btnModeSurface) btnModeSurface.classList.remove('active');
+      if (blenderContainer) blenderContainer.classList.remove('active');
+      if (canvasContainer) canvasContainer.style.display = 'block';
       n3d.controls.autoRotate = true;
       flyTo(new THREE.Vector3(0, 220, 920), new THREE.Vector3(0, 0, 0), 1200);
       showToast('Switched to Global Lunar Sphere View (Ingestion Overlays)', '🌍');
     } else {
-      if (btnModeGlobe) btnModeGlobe.classList.remove('active');
       if (btnModeSurface) btnModeSurface.classList.add('active');
+      if (blenderContainer) blenderContainer.classList.remove('active');
+      if (canvasContainer) canvasContainer.style.display = 'block';
       n3d.controls.autoRotate = false;
       // Close up at South Pole site
       const camSurface = boguCenter.clone().add(boguNormal.clone().multiplyScalar(45)).add(new THREE.Vector3(15, 20, 25));
@@ -949,6 +963,9 @@ function initNexus3DStudio() {
   }
   if (btnModeSurface) {
     btnModeSurface.addEventListener('click', () => setViewMode('surface'));
+  }
+  if (btnModeBlender) {
+    btnModeBlender.addEventListener('click', () => setViewMode('blender'));
   }
 
   // Ingestion Chips "FLY ↗" Buttons
@@ -1309,6 +1326,47 @@ function initNexus3DStudio() {
   }
   window.addEventListener('resize', onResize);
   n3d.onResize = onResize;
+
+  // 17. Continuous Animation and WebGL Render Loop
+  function animate() {
+    n3d.animationFrameId = requestAnimationFrame(animate);
+    if (n3d.controls) {
+      n3d.controls.update();
+    }
+    if (n3d.roverGroup) {
+      n3d.roverGroup.rotation.y += 0.002;
+    }
+    if (n3d.renderer && n3d.scene && n3d.camera && n3d.viewMode !== 'blender') {
+      n3d.renderer.render(n3d.scene, n3d.camera);
+    }
+  }
+  animate();
+
+  // In-Studio Blender Image Zoom Controls
+  let blenderZoom = 1.0;
+  const inStudioBlenderImg = document.getElementById('blenderInStudioImg');
+  const btnBlenderZoomIn = document.getElementById('btnBlenderZoomIn');
+  const btnBlenderZoomOut = document.getElementById('btnBlenderZoomOut');
+  const btnBlenderResetZoom = document.getElementById('btnBlenderResetZoom');
+
+  if (btnBlenderZoomIn && inStudioBlenderImg) {
+    btnBlenderZoomIn.addEventListener('click', () => {
+      blenderZoom = Math.min(blenderZoom + 0.25, 3.0);
+      inStudioBlenderImg.style.transform = `scale(${blenderZoom})`;
+    });
+  }
+  if (btnBlenderZoomOut && inStudioBlenderImg) {
+    btnBlenderZoomOut.addEventListener('click', () => {
+      blenderZoom = Math.max(blenderZoom - 0.25, 0.5);
+      inStudioBlenderImg.style.transform = `scale(${blenderZoom})`;
+    });
+  }
+  if (btnBlenderResetZoom && inStudioBlenderImg) {
+    btnBlenderResetZoom.addEventListener('click', () => {
+      blenderZoom = 1.0;
+      inStudioBlenderImg.style.transform = 'scale(1)';
+    });
+  }
 }
 
 
