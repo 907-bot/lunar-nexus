@@ -45,6 +45,11 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
           Catalog Index
         </button>
+        <button class="nav-tab" data-tab="tab-scientific-engine" id="tabBtnScientificEngine">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+          Scientific Engine (POC 8)
+          <span class="badge-pulse" id="scientificBadge">LIVE</span>
+        </button>
       </div>
 
 
@@ -443,6 +448,80 @@
                   </tbody>
                 </table>
               </div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <!-- TAB 5: Scientific Engine (POC 8) -->
+      <section class="tab-pane" id="tab-scientific-engine">
+        <div class="poc4-workspace">
+          <!-- Top Banner -->
+          <div class="poc4-top-banner glassmorphism">
+            <div class="banner-left">
+              <div class="banner-title-row">
+                <span class="pulse-dot active"></span>
+                <h2>POC-8: Live Digital Twin & Scientific Simulation</h2>
+                <span class="provenance-pill">MICROSERVICES ACTIVE</span>
+              </div>
+              <p class="banner-desc">
+                Real-time habitat evaluation powered by PINN (Thermal/Stress), PySCF (Chemistry), and MCTS Layout Optimization over the Knowledge Graph.
+              </p>
+            </div>
+            <div class="banner-actions" style="display: flex; gap: 10px; flex-direction: column;">
+              <div class="status-indicator" style="align-self: flex-end;">
+                <span class="pulse-dot" id="wsStatusDot" style="background: red;"></span>
+                <span class="status-text" id="wsStatusText">Gateway Offline</span>
+              </div>
+              <button class="btn-primary" id="btnRunMCTS">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 16 16 12 12 8"></polyline><line x1="8" y1="12" x2="16" y2="12"></line></svg>
+                RUN MCTS OPTIMIZATION
+              </button>
+              <button class="btn-secondary" id="btnRunThermal">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"></path></svg>
+                EVALUATE THERMAL (PINN)
+              </button>
+            </div>
+          </div>
+
+          <!-- Simulation Timeline -->
+          <div class="execution-progress-card glassmorphism" style="margin-top: 20px;">
+            <div class="progress-header">
+              <span class="progress-title">Temporal Simulation Slider (Lunar Day/Night Cycle)</span>
+              <span class="progress-step-label" id="timeSliderLabel">Day 0.0</span>
+            </div>
+            <input type="range" min="0" max="28" value="0" step="0.5" class="compare-slider" id="simulationTimeSlider" style="width: 100%; margin-top: 15px;">
+          </div>
+
+          <!-- Telemetry Panels -->
+          <div class="metrics-scorecard-row" style="margin-top: 20px;">
+            <div class="score-card glassmorphism">
+              <div class="score-lbl">MCTS Iterations</div>
+              <div class="score-val highlight-purple" id="mctsIterations">0</div>
+              <div class="score-sub">AI Layout Planner</div>
+            </div>
+            <div class="score-card glassmorphism">
+              <div class="score-lbl">PINN Avg Temp</div>
+              <div class="score-val highlight-amber" id="pinnAvgTemp">-- K</div>
+              <div class="score-sub">Surface Surrogate Model</div>
+            </div>
+            <div class="score-card glassmorphism">
+              <div class="score-lbl">GNN Vulnerabilities</div>
+              <div class="score-val highlight-cyan" id="gnnNodes">0 Nodes</div>
+              <div class="score-sub">Cascading Failure Risk</div>
+            </div>
+            <div class="score-card glassmorphism">
+              <div class="score-lbl">Oxygen Extracted</div>
+              <div class="score-val highlight-green" id="chemOxygen">-- kg</div>
+              <div class="score-sub">PySCF/ISRU Yield</div>
+            </div>
+          </div>
+          
+          <div class="poc4-section-card glassmorphism" style="margin-top: 20px;">
+            <div class="section-header-row">
+              <h3>Live SNN Hazard Telemetry feed</h3>
+            </div>
+            <div style="background: rgba(0,0,0,0.4); padding: 15px; border-radius: 8px; max-height: 200px; overflow-y: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;" id="snnLogFeed">
+              [SYSTEM] Waiting for WebSocket connection to AI Brain Gateway...
             </div>
           </div>
         </div>

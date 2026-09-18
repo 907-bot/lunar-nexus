@@ -832,3 +832,96 @@ function updatePOC4UI(data) {
   }
 }
 
+// ==========================================================================
+// POC-8 Scientific Engine / Microservices WebSocket Client
+// ==========================================================================
+let gatewaySocket = null;
+
+function initPOC8ScientificEngine() {
+  const wsStatusDot = document.getElementById('wsStatusDot');
+  const wsStatusText = document.getElementById('wsStatusText');
+  const snnLogFeed = document.getElementById('snnLogFeed');
+  
+  // Establish WebSocket connection to Gateway
+  function connectWebSocket() {
+    gatewaySocket = new WebSocket('ws://localhost:8000/ws');
+    
+    gatewaySocket.onopen = () => {
+      if (wsStatusDot) wsStatusDot.style.background = '#00ff00';
+      if (wsStatusText) wsStatusText.innerText = 'Gateway Online (Real-time)';
+      appendSnnLog('[SYSTEM] WebSocket Connected to AI Gateway.');
+    };
+    
+    gatewaySocket.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        
+        if (payload.type === 'MCTS_UPDATE') {
+          const mctsEl = document.getElementById('mctsIterations');
+          if (mctsEl) {
+            let curr = parseInt(mctsEl.innerText) || 0;
+            mctsEl.innerText = (curr + 1500) + ' (Optimizing)';
+          }
+        } else if (payload.type === 'PINN_THERMAL_MAP') {
+          const tempEl = document.getElementById('pinnAvgTemp');
+          if (tempEl) tempEl.innerText = payload.avg_temp + ' K';
+        } else if (payload.type === 'ACK') {
+          appendSnnLog(`[GATEWAY] ${payload.message}`);
+        } else {
+          // Assume SNN anomaly feed
+          appendSnnLog(`[SNN ALERT] ${JSON.stringify(payload)}`);
+        }
+      } catch(e) {
+        console.error('Error parsing WS message', e);
+      }
+    };
+    
+    gatewaySocket.onclose = () => {
+      if (wsStatusDot) wsStatusDot.style.background = 'red';
+      if (wsStatusText) wsStatusText.innerText = 'Gateway Offline (Reconnecting...)';
+      setTimeout(connectWebSocket, 3000);
+    };
+  }
+
+  function appendSnnLog(msg) {
+    if (!snnLogFeed) return;
+    const div = document.createElement('div');
+    div.innerText = `> ${new Date().toLocaleTimeString()} - ${msg}`;
+    snnLogFeed.appendChild(div);
+    snnLogFeed.scrollTop = snnLogFeed.scrollHeight;
+  }
+
+  // Attempt connection
+  connectWebSocket();
+
+  // Attach button listeners
+  const btnRunMCTS = document.getElementById('btnRunMCTS');
+  if (btnRunMCTS) {
+    btnRunMCTS.addEventListener('click', () => {
+      if (gatewaySocket && gatewaySocket.readyState === WebSocket.OPEN) {
+        gatewaySocket.send(JSON.stringify({ command: 'RUN_MCTS', layout: 'base_alpha' }));
+        appendSnnLog('[MCTS] Dispatched optimization command to AI Brain.');
+      } else {
+        alert('Cannot run MCTS. Gateway is offline.');
+      }
+    });
+  }
+
+  const btnRunThermal = document.getElementById('btnRunThermal');
+  if (btnRunThermal) {
+    btnRunThermal.addEventListener('click', () => {
+      if (gatewaySocket && gatewaySocket.readyState === WebSocket.OPEN) {
+        gatewaySocket.send(JSON.stringify({ command: 'GET_THERMAL', target: 'habitat_module_1' }));
+        appendSnnLog('[PINN] Dispatched thermal inference request.');
+      } else {
+        alert('Cannot run PINN. Gateway is offline.');
+      }
+    });
+  }
+}
+
+// Ensure POC-8 init runs when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(initPOC8ScientificEngine, 500);
+});
+
