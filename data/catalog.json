@@ -1457,5 +1457,69 @@
       "Westernmost_longitude": "29.3"
     },
     "ingested_at": "2026-09-05T04:56:20.840898Z"
+  },
+  "kaguya_tc_dem_1789925775": {
+    "mission": "KAGUYA",
+    "sensor": "TC",
+    "product_id": "kaguya_tc_dem_1789925775",
+    "acquisition_time": "2026-09-20T17:36:15.844050Z",
+    "file_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\tc\\kaguya_tc_dem_1789925775.tif",
+    "bbox": {
+      "min_lat": -75.0,
+      "max_lat": -71.5,
+      "min_lon": 23.0,
+      "max_lon": 29.0
+    },
+    "geometry": {
+      "solar_zenith_deg": 60.0
+    }
+  },
+  "lro_diviner_rdr_1789925786": {
+    "mission": "LRO",
+    "sensor": "DIVINER",
+    "product_id": "lro_diviner_rdr_1789925786",
+    "acquisition_time": "2026-09-20T17:36:26.312608Z",
+    "file_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\diviner\\lro_diviner_rdr_1789925786.tif",
+    "bbox": {
+      "min_lat": -75.0,
+      "max_lat": -71.5,
+      "min_lon": 23.0,
+      "max_lon": 29.0
+    },
+    "geometry": {
+      "solar_zenith_deg": 60.0
+    }
+  },
+  "lro_lend_map_1789925790": {
+    "mission": "LRO",
+    "sensor": "LEND",
+    "product_id": "lro_lend_map_1789925790",
+    "acquisition_time": "2026-09-20T17:36:30.251092Z",
+    "file_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\lend\\lro_lend_map_1789925790.tif",
+    "bbox": {
+      "min_lat": -75.0,
+      "max_lat": -71.5,
+      "min_lon": 23.0,
+      "max_lon": 29.0
+    },
+    "geometry": {
+      "solar_zenith_deg": 60.0
+    }
+  },
+  "ch2_iirs_ncn_1789925796_boguslawsky_strip": {
+    "mission": "CHANDRAYAAN-2",
+    "sensor": "IIRS",
+    "product_id": "ch2_iirs_ncn_1789925796_boguslawsky_strip",
+    "acquisition_time": "2026-09-20T17:36:36.566245Z",
+    "file_path": "C:\\Users\\Saisanapathi\\Downloads\\NEXUS-LUNAR\\data\\raw\\iirs\\ch2_iirs_ncn_1789925796_boguslawsky_strip.img",
+    "bbox": {
+      "min_lat": -75.0,
+      "max_lat": -71.5,
+      "min_lon": 23.0,
+      "max_lon": 29.0
+    },
+    "geometry": {
+      "solar_zenith_deg": 45.0
+    }
   }
 }

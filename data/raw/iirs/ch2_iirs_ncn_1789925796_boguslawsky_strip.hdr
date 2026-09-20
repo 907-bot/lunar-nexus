@@ -1,0 +1,17 @@
+ENVI
+description = {
+data\raw\iirs\ch2_iirs_ncn_1789925796_boguslawsky_strip.img}
+samples = 10
+lines   = 10
+bands   = 3
+header offset = 0
+file type = ENVI Standard
+data type = 4
+interleave = bsq
+byte order = 0
+map info = {Geographic Lat/Lon, 1, 1, 23, -71.5, 0.5, 0.5,WGS-84}
+coordinate system string = {GEOGCS["GCS_unknown",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.0174532925199433]]}
+band names = {
+Band 1,
+Band 2,
+Band 3}

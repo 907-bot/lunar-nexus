@@ -923,5 +923,192 @@ function initPOC8ScientificEngine() {
 // Ensure POC-8 init runs when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
   setTimeout(initPOC8ScientificEngine, 500);
+  fetchCatalogRegions();
 });
 
+// ==========================================================================
+// Science Intelligence 
+// ==========================================================================
+async function loadScienceIntelligenceData(regionId) {
+  const btn = document.getElementById('btnLoadScienceData');
+  if (btn) btn.disabled = true;
+  const btnReal = document.getElementById('btnLoadRealRegion');
+  if (btnReal) btnReal.disabled = true;
+  
+  // Set Loading States & Clear Old Data
+  const setEl = (id, val) => { const e = document.getElementById(id); if (e) e.innerHTML = val; };
+  
+  // Clear old states
+  setEl('sci-region-status', 'Loading...');
+  setEl('sci-status-pill', 'Status: LOADING');
+  setEl('sci-phys-conf', '0.0');
+  setEl('sci-chem-conf', '0.0');
+  setEl('sci-bio-conf', '0.0');
+  setEl('sci-phys-illum', '--');
+  setEl('sci-phys-solar-elev', '--');
+  setEl('sci-phys-shadow-status', '--');
+  setEl('sci-phys-terrain', '--');
+  setEl('sci-phys-thermal', '--');
+  setEl('sci-chem-cov', '--');
+  setEl('sci-chem-mat', '--');
+  setEl('sci-chem-source', '--');
+  setEl('sci-bio-water', '--');
+  setEl('sci-bio-therm', '--');
+  setEl('sci-bio-rad', '--');
+  setEl('sci-bio-exp', '--');
+  setEl('sci-fusion-status', '--');
+  setEl('sci-fusion-missing', '--');
+  setEl('sci-prov-type', '--');
+  setEl('sci-prov-mission', '--');
+  setEl('sci-prov-source', '--');
+  setEl('sci-prov-dataset', '--');
+  setEl('sci-prov-obs', '--');
+  setEl('sci-prov-proc', '--');
+  setEl('sci-prov-derived', '--');
+  setEl('sci-limitations', '<li>Loading...</li>');
+
+  setEl('sci-region-id', regionId);
+  setEl('sci-region-name', regionId.includes('DEMO') ? 'Boguslawsky Demo Region' : 'Catalog Region');
+  setEl('sci-data-mode', regionId.includes('DEMO') ? '● SYNTHETIC DEMONSTRATION' : '● REAL MISSION DATA');
+  
+  try {
+    const res = await fetch(`/api/science/region/${regionId}`);
+    if (res.ok) {
+      const data = await res.json();
+      
+      const overallStatus = data.status || 'UNKNOWN';
+      setEl('sci-region-status', overallStatus);
+      setEl('sci-status-pill', `Status: ${overallStatus}`);
+      
+      // Confidence logic
+      setEl('sci-phys-conf', data.confidence?.physics != null ? data.confidence.physics.toFixed(2) : 'NOT AVAILABLE');
+      setEl('sci-chem-conf', data.confidence?.chemistry != null ? data.confidence.chemistry.toFixed(2) : 'NOT AVAILABLE');
+      setEl('sci-bio-conf', data.confidence?.biology != null ? data.confidence.biology.toFixed(2) : 'NOT AVAILABLE');
+
+      // Physics
+      if (data.physics) {
+        setEl('sci-phys-illum', data.physics.illumination_condition || 'INSUFFICIENT_DATA');
+        setEl('sci-phys-solar-elev', data.physics.solar_elevation_deg !== null && data.physics.solar_elevation_deg !== undefined ? `${data.physics.solar_elevation_deg}°` : 'INSUFFICIENT_DATA');
+        setEl('sci-phys-shadow-status', data.physics.shadow_detected !== null && data.physics.shadow_detected !== undefined ? (data.physics.shadow_detected ? 'DETECTED' : 'NONE') : 'INSUFFICIENT_DATA');
+        setEl('sci-phys-terrain', data.physics.slope_deg !== null && data.physics.slope_deg !== undefined ? `${data.physics.slope_deg}°` : 'INSUFFICIENT_DATA');
+        setEl('sci-phys-thermal', data.physics.thermal_estimate ? `${data.physics.thermal_estimate} K (MODEL_DERIVED)` : 'INSUFFICIENT_DATA');
+      }
+      
+      // Chemistry
+      if (data.chemistry) {
+        setEl('sci-chem-cov', data.chemistry.spectral_coverage ? 'AVAILABLE - DEMO' : 'INSUFFICIENT_DATA');
+        const mat = data.chemistry.candidate_materials;
+        setEl('sci-chem-mat', (mat && mat.length > 0) ? mat.map(m => m.name).join(', ') : 'INSUFFICIENT_DATA');
+        setEl('sci-chem-source', regionId.includes('DEMO') ? 'SYNTHETIC DEMONSTRATION' : 'REAL SENSOR');
+      }
+
+      // Biology / Habitability
+      if (data.habitability || data.biology) {
+        const hab = data.habitability || data.biology;
+        setEl('sci-bio-water', hab.water_ice_evidence || 'INSUFFICIENT_DATA');
+        setEl('sci-bio-therm', hab.thermal_suitability || 'INSUFFICIENT_DATA');
+        setEl('sci-bio-rad', hab.radiation_availability || 'INSUFFICIENT_DATA');
+        setEl('sci-bio-exp', hab.experiment_suitability || 'INSUFFICIENT_DATA');
+      }
+
+      // Fusion
+      setEl('sci-fusion-status', overallStatus);
+      
+      // Missing Data
+      const missingList = data.missing_data || [];
+      if (missingList.length > 0) {
+        const missingHtml = `<ul>${missingList.map(m => `<li>${m}</li>`).join('')}</ul>`;
+        setEl('sci-fusion-missing', missingHtml);
+      } else {
+        setEl('sci-fusion-missing', 'NONE');
+      }
+
+      // Provenance
+      if (data.provenance && data.provenance.length > 0) {
+        const p = data.provenance[0];
+        setEl('sci-prov-type', p.source_type || 'UNKNOWN');
+        setEl('sci-prov-mission', p.mission || '--');
+        setEl('sci-prov-source', p.source || '--');
+        setEl('sci-prov-dataset', p.dataset_id || '--');
+        setEl('sci-prov-obs', p.observation_id || '--');
+        setEl('sci-prov-proc', p.processing_method || '--');
+        setEl('sci-prov-derived', p.derived ? 'Yes' : 'No');
+      }
+
+      // Limitations
+      const limits = data.limitations || [];
+      if (limits.length > 0) {
+        const limHtml = limits.map(l => `<li>${l}</li>`).join('');
+        setEl('sci-limitations', limHtml);
+      } else {
+        setEl('sci-limitations', '<li>None reported</li>');
+      }
+
+    } else {
+      console.error("Failed to load science intelligence data", await res.text());
+      setEl('sci-region-status', 'DATA UNAVAILABLE');
+      setEl('sci-status-pill', 'DATA UNAVAILABLE');
+      alert("Science data could not be loaded.");
+    }
+  } catch (e) {
+    console.error("Error loading science intelligence data", e);
+    setEl('sci-region-status', 'DATA UNAVAILABLE');
+    setEl('sci-status-pill', 'DATA UNAVAILABLE');
+    alert("Science data could not be loaded.");
+  } finally {
+    if (btn) btn.disabled = false;
+    const btnReal = document.getElementById('btnLoadRealRegion');
+    if (btnReal) btnReal.disabled = false;
+  }
+}
+
+async function fetchCatalogRegions() {
+  const sel = document.getElementById('realRegionSelect');
+  if (!sel) return;
+  try {
+    const res = await fetch('/api/catalog/regions');
+    if (res.ok) {
+      const data = await res.json();
+      const regions = data.regions || [];
+      if (regions.length === 0) {
+        document.getElementById('empty-catalog-message').style.display = 'block';
+        document.getElementById('science-content-area').style.display = 'none';
+        
+        const stats = data.stats || { total: 0, nasa: 0, isro: 0, jaxa: 0 };
+        document.getElementById('catalog-status-counts').innerHTML = `
+          <li>Real Regions: ${stats.total}</li>
+          <li>NASA Products: ${stats.nasa}</li>
+          <li>Chandrayaan-2 Products: ${stats.isro}</li>
+          <li>JAXA Products: ${stats.jaxa}</li>
+        `;
+        
+        sel.innerHTML = '<option value="">No real observations available</option>';
+        sel.disabled = true;
+        const btnReal = document.getElementById('btnLoadRealRegion');
+        if (btnReal) btnReal.disabled = true;
+      } else {
+        document.getElementById('empty-catalog-message').style.display = 'none';
+        document.getElementById('science-content-area').style.display = 'block';
+        
+        sel.innerHTML = '<option value="">Select a region...</option>';
+        regions.forEach(r => {
+          const opt = document.createElement('option');
+          opt.value = r.id;
+          opt.textContent = `${r.mission} | ${r.sensor} | ${r.id}`;
+          sel.appendChild(opt);
+        });
+      }
+    }
+  } catch(e) {
+    console.error("Failed to fetch regions", e);
+  }
+}
+
+function loadRealScienceRegion() {
+  const sel = document.getElementById('realRegionSelect');
+  if (sel && sel.value) {
+    loadScienceIntelligenceData(sel.value);
+  } else {
+    alert("Please select a real region from the dropdown first.");
+  }
+}

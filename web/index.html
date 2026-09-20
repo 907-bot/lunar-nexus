@@ -50,6 +50,10 @@
           Scientific Engine (POC 8)
           <span class="badge-pulse" id="scientificBadge">LIVE</span>
         </button>
+        <button class="nav-tab" data-tab="tab-science-intelligence" id="tabBtnScienceIntelligence">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path><path d="M2 12h20"></path></svg>
+          Science Intelligence
+        </button>
       </div>
 
 
@@ -524,6 +528,154 @@
               [SYSTEM] Waiting for WebSocket connection to AI Brain Gateway...
             </div>
           </div>
+        </div>
+      </section>
+      <!-- TAB 6: Science Intelligence -->
+      <section class="tab-pane" id="tab-science-intelligence">
+        <div class="poc4-workspace">
+          <div class="poc4-top-banner glassmorphism">
+            <div class="banner-left">
+              <div class="banner-title-row">
+                <span class="pulse-dot active"></span>
+                <h2>Science Intelligence</h2>
+                <span class="provenance-pill">EVIDENCE FUSION</span>
+              </div>
+              <p class="banner-desc">
+                Physics, Chemistry, and Biology/Habitability evidence fusion for lunar regions.
+              </p>
+            </div>
+            <div class="banner-actions" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: flex-end;">
+              <select id="realRegionSelect" style="padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.5); color: #fff; border: 1px solid var(--border-subtle); max-width: 200px;">
+                <option value="">Loading regions...</option>
+              </select>
+              <button class="btn-primary" id="btnLoadRealRegion" onclick="loadRealScienceRegion()" style="background: var(--accent-blue);">
+                LOAD REAL REGION
+              </button>
+              <button class="btn-secondary" id="btnLoadScienceData" onclick="loadScienceIntelligenceData('DEMO-LUNAR-001')">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                LOAD DEMO REGION
+              </button>
+            </div>
+          </div>
+          
+          <div id="empty-catalog-message" style="display: none; margin-top: 20px; padding: 20px; background: rgba(255,50,50,0.1); border: 1px solid rgba(255,50,50,0.3); border-radius: 8px;">
+            <h3 style="color: #ff6b6b; margin-top: 0;">REAL DATA MODE: No real observations available</h3>
+            <p>Import real mission data into the NEXUS-LUNAR catalog to enable REAL DATA MODE.</p>
+            <p>Import:</p>
+            <ul>
+              <li>Chandrayaan-2</li>
+              <li>NASA LRO</li>
+              <li>JAXA SELENE/Kaguya</li>
+            </ul>
+            <div style="margin-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px;">
+              <h4>Catalog Status</h4>
+              <ul style="list-style: none; padding-left: 0;" id="catalog-status-counts">
+                <li>Real Regions: 0</li>
+                <li>NASA Products: 0</li>
+                <li>Chandrayaan-2 Products: 0</li>
+                <li>JAXA Products: 0</li>
+              </ul>
+            </div>
+          </div>
+
+          <!-- Region Information -->
+          <div id="science-content-area">
+          <div class="poc4-card glassmorphism" style="margin-top: 20px;">
+            <div class="card-header">
+              <h3>Region Information</h3>
+              <span class="tag-pill tag-green" id="sci-status-pill">Status: UNKNOWN</span>
+            </div>
+            <div class="card-body" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <div class="info-row"><span class="lbl">Region:</span> <strong id="sci-region-id">--</strong></div>
+              <div class="info-row"><span class="lbl">Region Name:</span> <strong id="sci-region-name">--</strong></div>
+              <div class="info-row"><span class="lbl">Data Mode:</span> <strong id="sci-data-mode">--</strong></div>
+              <div class="info-row"><span class="lbl">Status:</span> <strong id="sci-region-status">--</strong></div>
+            </div>
+          </div>
+
+          <div class="poc4-grid-row" style="margin-top: 20px;">
+            <div class="poc4-card glassmorphism" id="science-physics-panel">
+              <div class="card-header">
+                <h3>Physics</h3>
+                <span class="tag-pill tag-lro">Confidence: <span id="sci-phys-conf">0.0</span></span>
+              </div>
+              <div class="card-body">
+                <div class="info-row"><span class="lbl">Illumination:</span> <strong id="sci-phys-illum">--</strong></div>
+                <div class="info-row"><span class="lbl">Solar Elevation:</span> <strong id="sci-phys-solar-elev">--</strong></div>
+                <div class="info-row"><span class="lbl">Shadow Status:</span> <strong id="sci-phys-shadow-status">--</strong></div>
+                <div class="info-row"><span class="lbl">Terrain / Slope:</span> <strong id="sci-phys-terrain">--</strong></div>
+                <div class="info-row"><span class="lbl">Thermal Estimate:</span> <strong id="sci-phys-thermal">--</strong></div>
+              </div>
+            </div>
+
+            <div class="poc4-card glassmorphism" id="science-chemistry-panel">
+              <div class="card-header">
+                <h3>Chemistry</h3>
+                <span class="tag-pill tag-ohrc">Confidence: <span id="sci-chem-conf">0.0</span></span>
+              </div>
+              <div class="card-body">
+                <div class="info-row"><span class="lbl">Spectral Coverage:</span> <strong id="sci-chem-cov">--</strong></div>
+                <div class="info-row"><span class="lbl">Candidate Materials:</span> <strong id="sci-chem-mat">--</strong></div>
+                <div class="info-row"><span class="lbl">Data Source:</span> <strong id="sci-chem-source">--</strong></div>
+              </div>
+            </div>
+
+            <div class="poc4-card glassmorphism" id="science-biology-panel">
+              <div class="card-header">
+                <h3>Habitability / Biological Experiment Support</h3>
+                <span class="tag-pill tag-green">Confidence: <span id="sci-bio-conf">0.0</span></span>
+              </div>
+              <div class="card-body">
+                <div class="info-row"><span class="lbl">Water/Ice Evidence:</span> <strong id="sci-bio-water">--</strong></div>
+                <div class="info-row"><span class="lbl">Thermal Suitability:</span> <strong id="sci-bio-therm">--</strong></div>
+                <div class="info-row"><span class="lbl">Radiation:</span> <strong id="sci-bio-rad">--</strong></div>
+                <div class="info-row"><span class="lbl">Experiment Suitability:</span> <strong id="sci-bio-exp">--</strong></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="metrics-scorecard-row" style="margin-top: 20px;">
+            <div class="score-card glassmorphism">
+              <div class="score-lbl">Overall Status</div>
+              <div class="score-val highlight-cyan" id="sci-fusion-status">--</div>
+              <div class="score-sub">Evidence Fusion</div>
+            </div>
+            <div class="score-card glassmorphism" style="flex: 2;">
+              <div class="score-lbl">Missing Data</div>
+              <div class="score-val highlight-amber" id="sci-fusion-missing" style="font-size: 0.9rem;">--</div>
+              <div class="score-sub">Required but unavailable inputs</div>
+            </div>
+          </div>
+
+          <div class="poc4-grid-row" style="margin-top: 20px;">
+            <div class="poc4-card glassmorphism" style="flex: 1;">
+              <div class="card-header">
+                <h3>Data Provenance</h3>
+              </div>
+              <div class="card-body">
+                <div class="info-row"><span class="lbl">Source Type:</span> <strong id="sci-prov-type">--</strong></div>
+                <div class="info-row"><span class="lbl">Mission:</span> <strong id="sci-prov-mission">--</strong></div>
+                <div class="info-row"><span class="lbl">Source:</span> <strong id="sci-prov-source">--</strong></div>
+                <div class="info-row"><span class="lbl">Dataset:</span> <strong id="sci-prov-dataset">--</strong></div>
+                <div class="info-row"><span class="lbl">Observation:</span> <strong id="sci-prov-obs">--</strong></div>
+                <div class="info-row"><span class="lbl">Processing:</span> <strong id="sci-prov-proc">--</strong></div>
+                <div class="info-row"><span class="lbl">Derived:</span> <strong id="sci-prov-derived">--</strong></div>
+              </div>
+            </div>
+            <div class="poc4-card glassmorphism" style="flex: 1;">
+              <div class="card-header">
+                <h3>Limitations</h3>
+              </div>
+              <div class="card-body">
+                <ul id="sci-limitations" style="font-size: 0.85rem; color: var(--text-secondary); padding-left: 20px;">
+                  <li>--</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+        </div>
         </div>
       </section>
     </main>

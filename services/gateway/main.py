@@ -88,6 +88,50 @@ async def websocket_endpoint(websocket: WebSocket):
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 
+# --- SCIENCE INTELLIGENCE ENDPOINTS ---
+
+from packages.science_engine.models import PhysicsResult, ChemistryResult, BiologyResult, ScienceIntelligenceResult, ScienceStatus, EvidenceStatus, ConfidenceScore
+from packages.science_engine.physics.illumination import calculate_illumination
+from packages.data_pipeline.models import ObservationGeometry
+from packages.science_engine.provenance import create_provenance
+
+def _get_mock_physics(region_id: str) -> PhysicsResult:
+    # Example logic using the new engine. In a real system, we'd query the DB for the region.
+    geom = ObservationGeometry(solar_zenith_deg=45.0, solar_azimuth_deg=120.0)
+    illum = calculate_illumination(latitude=0.0, longitude=0.0, geometry=geom)
+    return PhysicsResult(
+        illumination_condition=illum.get("illumination_condition"),
+        status=ScienceStatus.COMPLETE
+    )
+
+def _get_mock_chemistry(region_id: str) -> ChemistryResult:
+    return ChemistryResult(status=ScienceStatus.INSUFFICIENT_DATA)
+
+def _get_mock_biology(region_id: str) -> BiologyResult:
+    return BiologyResult(status=ScienceStatus.INSUFFICIENT_DATA)
+
+@app.get("/science/region/{region_id}/physics", response_model=PhysicsResult)
+async def get_physics(region_id: str):
+    return _get_mock_physics(region_id)
+
+@app.get("/science/region/{region_id}/chemistry", response_model=ChemistryResult)
+async def get_chemistry(region_id: str):
+    return _get_mock_chemistry(region_id)
+
+@app.get("/science/region/{region_id}/biology", response_model=BiologyResult)
+async def get_biology(region_id: str):
+    return _get_mock_biology(region_id)
+
+@app.get("/science/region/{region_id}/fusion", response_model=ScienceIntelligenceResult)
+@app.get("/science/region/{region_id}", response_model=ScienceIntelligenceResult)
+async def get_science_fusion(region_id: str):
+    from packages.science_engine.fusion import fuse_evidence
+    physics = _get_mock_physics(region_id)
+    chemistry = _get_mock_chemistry(region_id)
+    biology = _get_mock_biology(region_id)
+    prov = create_provenance(source="Gateway API mock", processing_method="None", derived=True)
+    return fuse_evidence(region_id, physics, chemistry, biology, [prov])
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
