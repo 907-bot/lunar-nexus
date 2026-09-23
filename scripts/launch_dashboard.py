@@ -263,7 +263,11 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                         return
                     
                     target_obs = catalog[region_id]
-                    target_file_path = target_obs.get("file_path", "")
+                    # Fallback to primary_image_path if file_path key is absent
+                    target_file_path = target_obs.get("file_path") or target_obs.get("primary_image_path", "")
+                    # Resolve relative paths against project root
+                    if target_file_path and not os.path.isabs(target_file_path):
+                        target_file_path = str(PROJECT_ROOT / target_file_path)
                     target_file_exists = os.path.exists(target_file_path) if target_file_path else False
                     
                     missing = []
@@ -272,6 +276,7 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                         missing.append(f"Raw data file for {target_obs.get('sensor', 'sensor')} is missing")
                     
                     # 1. Physics Extraction
+                    from packages.science_engine.physics.thermal_model import estimate_thermal_condition
                     geom = target_obs.get("geometry", {})
                     solar_zenith = geom.get("solar_zenith_deg")
                     solar_elev = 90.0 - float(solar_zenith) if solar_zenith is not None else None
@@ -281,6 +286,16 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                         solar_elev = None
                         
                     is_illuminated = solar_elev > 0 if solar_elev is not None else None
+
+                    # Derive thermal estimate from solar elevation + latitude (model-derived, not measured)
+                    target_bbox = target_obs.get("bbox", {})
+                    min_lat = target_bbox.get("min_lat", 0) if target_bbox else 0
+                    max_lat = target_bbox.get("max_lat", 0) if target_bbox else 0
+                    min_lon = target_bbox.get("min_lon", 0) if target_bbox else 0
+                    max_lon = target_bbox.get("max_lon", 0) if target_bbox else 0
+                    center_lat = (min_lat + max_lat) / 2.0 if target_bbox else None
+                    thermal_res = estimate_thermal_condition(solar_elev, latitude=center_lat)
+                    thermal_estimate_val = thermal_res.get("thermal_estimate")
                     
                     physics = PhysicsResult(
                         solar_elevation_deg=solar_elev,
@@ -288,16 +303,11 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                         shadow_detected=not is_illuminated if is_illuminated is not None else None,
                         slope_deg=None,
                         aspect_deg=None,
-                        thermal_estimate=None,
+                        thermal_estimate=thermal_estimate_val,
                         status=ScienceStatus.PARTIAL if solar_elev is not None else ScienceStatus.INSUFFICIENT_DATA
                     )
-                    
-                    target_bbox = target_obs.get("bbox", {})
-                    min_lat = target_bbox.get("min_lat", 0)
-                    max_lat = target_bbox.get("max_lat", 0)
-                    min_lon = target_bbox.get("min_lon", 0)
-                    max_lon = target_bbox.get("max_lon", 0)
-                    
+
+
                     overlapping_dem = None
                     overlapping_diviner = None
                     overlapping_lend = None
@@ -310,21 +320,32 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                         if (min_lat <= v_bbox.get("max_lat", -90) and max_lat >= v_bbox.get("min_lat", 90) and
                             min_lon <= v_bbox.get("max_lon", -180) and max_lon >= v_bbox.get("min_lon", 180)):
                             
-                            rp = v.get("file_path", "")
-                            if os.path.exists(rp):
+                            rp = v.get("file_path") or v.get("primary_image_path") or ""
+                            # Resolve relative paths against project root
+                            if rp and not os.path.isabs(rp):
+                                rp = str(PROJECT_ROOT / rp)
+                            if rp and os.path.exists(rp):
                                 if v_sensor == "IIRS":
                                     overlapping_iirs.append(v)
-                                elif v.get("product_id", "").endswith("_dem") or "DEM" in v.get("product_id", "") or v_sensor == "TC":
+                                elif v.get("product_id", "").endswith("_dem") or "DEM" in v.get("product_id", "") or v_sensor in ("TC", "SELENE_TC"):
                                     overlapping_dem = v
                                 elif v_sensor == "DIVINER":
                                     overlapping_diviner = v
                                 elif v_sensor == "LEND":
                                     overlapping_lend = v
                                     
-                    # Process DEM
+                    # Process DEM — derive a geophysically-plausible slope proxy from polar latitude
                     if overlapping_dem:
-                        physics.slope_deg = 14.5  # Derived proxy from dummy raster
-                        physics.aspect_deg = 45.0
+                        dem_geom = overlapping_dem.get("geometry", {})
+                        dem_lat = (overlapping_dem.get("bbox", {}).get("min_lat", 0) +
+                                   overlapping_dem.get("bbox", {}).get("max_lat", 0)) / 2.0
+                        # High-latitude polar craters (>70°) typically show steeper rim slopes (~15-25°)
+                        # Equatorial terrain averages ~8-12°. This is a model-derived proxy, not measured.
+                        abs_lat = abs(dem_lat)
+                        proxy_slope = round(8.0 + (abs_lat - 45.0) * 0.35, 1) if abs_lat > 45 else 8.0
+                        proxy_slope = max(0.0, min(proxy_slope, 35.0))  # clamp to realistic range
+                        physics.slope_deg = proxy_slope
+                        physics.aspect_deg = dem_geom.get("solar_azimuth_deg", 180.0)  # proxy from illumination geometry
                     else:
                         missing.append("Raw DEM / terrain data")
                         
@@ -366,7 +387,21 @@ class NexusDashboardHandler(SimpleHTTPRequestHandler):
                     
                     fusion_result = fuse_evidence(region_id, physics, chemistry, biology, [prov])
                     fusion_result.missing_data = missing
-                    fusion_result.limitations = ["Missing actual terrain models", "Physics limited to metadata extraction"]
+                    _lims = []
+                    if not overlapping_dem:
+                        _lims.append("Terrain slope/aspect unavailable: no overlapping DEM in catalog for this region.")
+                    else:
+                        _lims.append("Terrain slope/aspect is a latitude-derived proxy — not measured from a raster DEM.")
+                    if thermal_estimate_val:
+                        _lims.append("Thermal estimate is model-derived from solar geometry and latitude — not a measured temperature.")
+                    else:
+                        _lims.append("Thermal estimate unavailable: solar geometry data missing from catalog entry.")
+                    if not overlapping_iirs:
+                        _lims.append("Spectral chemistry analysis requires overlapping IIRS data for this region.")
+                    if not overlapping_lend:
+                        _lims.append("Radiation/water-ice analysis requires overlapping LEND neutron data.")
+                    _lims.append("Habitability assessment does not detect biological life — only physical suitability.")
+                    fusion_result.limitations = _lims
                     
                     # Force confidence to None (NOT AVAILABLE) for missing real data
                     fusion_result.confidence = ConfidenceScore(physics=None, chemistry=None, biology=None)
